@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'">
-<title>EMEA H2 Delivery Viewer</title>
+<title>EMEA Delivery Viewer</title>
 <style>
 :root{--red:#E31837;--steel:#4D4D4F;--anchor1:#4A453D;--anchor2:#29251D;--cg1:#F6F2EA;--cg2:#E5DFD3;--cred:#F8B4A3;--impact:#5F0229;--navy:#0A0838;
-      --green:#2E7D32;--amber:#B7791F;--bg:#FFFFFF;--muted:#6D6E70;--line:#E5DFD3}
+      --green:#2E7D32;--amber:#B7791F;--bg:#FFFFFF;--muted:#6D6E70;--line:#E5DFD3;
+      --c-closed:#2E8540;--c-bill:#3B6EA8;--c-oc:#8E2C5A;--c-on:#C98A1B;--c-ex:#E31837}
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--anchor2);background:var(--bg);font-size:14px}
 header{display:flex;align-items:center;gap:20px;padding:14px 24px;border-bottom:6px solid var(--red);flex-wrap:wrap}
@@ -22,11 +23,12 @@ main{padding:20px 24px;max-width:1500px;margin:0 auto}
 .drop{border:2px dashed var(--cg2);border-radius:10px;padding:48px;text-align:center;background:var(--cg1);margin:40px auto;max-width:720px}
 .drop.over{border-color:var(--red)}
 .btn{background:var(--red);color:#fff;border:0;border-radius:6px;padding:10px 18px;font-size:14px;cursor:pointer;font-weight:bold}
-.btn.ghost{background:#fff;color:var(--red);border:1px solid var(--red)}
+.btn.ghost{background:#fff;color:var(--red);border:1px solid var(--red);padding:7px 12px;font-size:13px}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin:12px 0 20px}
 .card{background:var(--cg1);border-left:5px solid var(--steel);padding:12px 14px;border-radius:4px}
+.card.click{cursor:pointer}.card.click:hover{outline:2px solid var(--cg2)}
 .card .l{font-size:11px;font-weight:bold;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
-.card .v{font-size:24px;font-weight:bold;margin:6px 0 2px}
+.card .v{font-size:24px;font-weight:bold;margin:6px 0 2px;color:var(--anchor2)}
 .card .s{font-size:12px;color:var(--muted)}
 h2{font-size:16px;color:#fff;background:var(--red);padding:8px 12px;margin:24px 0 8px;border-radius:3px}
 h2.dark{background:var(--anchor2)}
@@ -34,6 +36,8 @@ h2.dark{background:var(--anchor2)}
 .tblwrap{overflow:auto;border:1px solid var(--line);border-radius:4px;max-height:640px}
 table{border-collapse:collapse;width:100%;font-size:12.5px}
 th{background:var(--cg2);color:var(--anchor2);text-align:left;padding:7px 8px;position:sticky;top:0;white-space:nowrap;z-index:1}
+th.s{cursor:pointer;user-select:none}th.s:hover{background:#D9D1C1}
+th .ar{color:var(--red);font-size:10px;margin-left:3px}
 td{padding:6px 8px;border-bottom:1px solid #EFEAE0;white-space:nowrap}
 tr:nth-child(even) td{background:#FBF9F5}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
@@ -48,28 +52,46 @@ td.c{text-align:center}
 .blank{background:#FF9999 !important;color:var(--impact);font-weight:bold}
 .na{color:#A6A6A6;font-style:italic}
 .need{color:var(--impact);font-weight:bold}
-.controls{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin:8px 0 4px}
+.controls{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:8px 0 4px}
 .controls label{font-size:11px;font-weight:bold;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase}
-select,input[type=search]{padding:8px 10px;border:1px solid var(--cg2);border-radius:5px;font-size:14px;background:#FFFDE7;min-width:220px;max-width:100%}
+select,input[type=search],input[type=number]{padding:8px 10px;border:1px solid var(--cg2);border-radius:5px;font-size:14px;background:#FFFDE7;min-width:150px;max-width:100%}
+input[type=number]{min-width:150px;width:170px}
+.fbar{background:var(--cg1);border:1px solid var(--cg2);border-radius:6px;padding:10px 14px;position:sticky;top:0;z-index:5}
+.fbar .controls{margin:0}
+.fbar select{min-width:130px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;font-size:12px}
+.chip{background:#fff;border:1px solid var(--red);color:var(--red);border-radius:12px;padding:3px 10px;cursor:pointer;font-weight:bold}
+.chip:hover{background:var(--red);color:#fff}
 .ins{background:var(--cg1);padding:10px 14px;border-radius:4px}
 .ins div{padding:5px 0;border-bottom:1px solid var(--cg2);font-size:13px}
 .ins div:last-child{border:0}
-.bars .row{display:grid;grid-template-columns:200px 1fr 130px;gap:10px;align-items:center;margin:6px 0;font-size:13px}
-.bars .track{background:var(--cg1);height:20px;border-radius:3px;position:relative}
-.bars .fill{height:20px;border-radius:3px}
-.bars .tgt{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--anchor2)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-@media (max-width:900px){.grid2{grid-template-columns:1fr}.bars .row{grid-template-columns:120px 1fr 100px}main{padding:16px}}
+.panel{border:1px solid var(--line);border-radius:6px;padding:12px 14px;background:#fff;min-width:0}
+.panel h3{margin:0 0 2px;font-size:14px}
+.panel .sub{margin:0 0 8px}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{font-family:Arial,Helvetica,sans-serif;fill:var(--anchor2)}
+svg.chart .ax{fill:var(--muted);font-size:11px}
+svg.chart .grid{stroke:#EDE8DE;stroke-width:1}
+svg.chart .hit{cursor:pointer}
+svg.chart .hit:hover rect.m,svg.chart rect.m.hl{opacity:.82}
+svg.chart rect.sel{stroke:var(--anchor2);stroke-width:2}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--steel);margin:4px 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+#tip{position:fixed;pointer-events:none;background:var(--anchor2);color:#fff;font-size:12px;padding:7px 10px;border-radius:5px;z-index:50;display:none;max-width:320px;line-height:1.45;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}main{padding:16px}.fbar{position:static}}
 .hidden{display:none}
 .foot{font-size:11px;color:var(--muted);text-align:center;padding:20px}
 .err{background:var(--cred);color:var(--impact);padding:10px;border-radius:4px;margin:10px 0}
+.warn{background:#FFF4D6;color:#7F6000;padding:6px 10px;border-radius:4px;font-size:12px;margin-top:8px}
 </style>
 </head>
 <body>
 <header>
   <img alt="Tech Mahindra" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlkAAADBCAYAAAD8UqVAAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAABJ5SURBVHhe7d3PaxxH3sfxr58JFitWYJgGMSaTo2fOkVmI5k9Y/cA+PPHR8T56iC/xwZJNLjn4YhTZB+/FAT94fXT2sEa29k/QGB4snzM6eh48GLrBoAeFMRnmOVidR1t4pn/Mt7qru98v8KUGklZXdfWnq7qrzozH47EAAABA1b+ZBQAAAJgdIQsAAMACQhYAAIAFhCwAAAALCFkAAAAWELIAAAAsIGQBAABYQMgCAACwgJAFAABgASELAADAAkIWAACABYQsAAAACwhZAAAAFhCyAAAALCBkAQAAWEDIAgAAsICQBQAAYAEhCwAAwIIz4/F4bBZm4fvbt82iyrq7vW0WAQCAgsslZAW+T8g6Ufc8QhbUaF1btEsAmB3ThQAAABYQsgAAACwgZAEAAFhAyAIAALCAkAUAAGABIQsAAMACQhYAAIAFhCwAAAALCFkAAAAWELIAAAAsIGQBAABYQMgCAACwgJAFAABgwZnxeDw2C20LfF/u7eyYxaoC3zeLUql7nlmkyvM8ubm1ZRYDqQS+L9/fvm0WJ1b3PLm7vW0WAwASyCVkZeH+zo70fvnFLE7s6rVrstzpmMWAkwhZAOAOpgsBAAAsYCQrQt4jWfctT6vmrV6vy4VWS1qtlvrUbOD74geBHP7yixweHoqvNIWctdW1tdhtMK+RLK3p+Um02wYAZIGQFSHPkKV1wyyCuufJ8vKyrK6vmz+l8mJ3V148f24WF9Ld7e3YIUOrzcQJWb1eT/aeP1e5zqKEf3+r1bIWygFAG9OFcELg+/Li+XN5sbtr/pRI4Ptyf2enNAFrudNxMkz0ej25/+OPmQQsOanXwPelu78vTx4/lns7OzO3FQCwjZAFp3S7XbMotnAUJ6sbfxa+ymkUdZrA9+X+jz+axZkKQ/n3t29bn6oEgLQIWXBKOFqRxpO//c0sKrRWuy2tVssszp1L5zk4WQ6GoAXARYQsOOew1zOLIr3Y3S3VCJaIyFfLy2ZR7lw8z2HQAgDXELJQCmV5B+u0vD64mKTX6zl7ngPf5x0tAM4hZKHw0k4vusy1gCUisudowAp1u12mDQE4hZCFwkszveg61154d3Ga0BScrIsGAK4gZKHweiULWa698O7yNKHp0PEgCKBaCFkovDJNEbXabec2DH/y+LFZ5KzDw0OzCAByQ8gCHFD3PFldW3MuYN0v2PIIRd06CUA5sa1OhDJsq9Nqt2Vlbc0stmqWxSqXOx25eu2aWTzRf/7lL2bRTMLAk1e9z0KrzdQ9T65euzZTPeYhznZAAJAVQlaEMoSspKFlVrMed9Lj1QxZLk7XJTHruQ/VPU88y9v5aFyfJkIWAJcQsiIQspKb9biTHq9WyCrDDXrWcx/K4lwEJ6v7a75Un8VxA0BcvJMFnFjNeEq16uqeJ6vr63Lz1i3zJwAoBUIWcMKlZROqpNVq5TZaDAA2EbIA5M61xVcBQAMhC+rKtjgo7PPqdbMIAAqPkAUJfF/t34vd3UItXgk31C1/yQgAeeDrwghV+LpQ6+s8LVHHa9I6/rvb24W/2Wu1mTy+0tOoxzyOGwAmYSQLAADAAkIWAACABYQsAAAACwhZcM4F1qsCAJQAIQvOYVFQAEAZELLglOVOp/Bf+AEAIIQsiENrFNU9L9HSDQAAuIyQBSem51rtNusbAQBKhZAFWV1bk9W1NWm121L3vMz+tdptWV1bk7vb23Jza8s8LAAACo0V3yNUYcX3otNYKVxY8f1f1HNYOV2jHvM4bgCYhJEsAAAACwhZFRAEgVmET/A5TwAARYSsCvB93ywCAACWEbIqIPB9ebG7axbD8HJ/3ywCACA1QlZFdLtdglaE7v6+9Ho9sxgAgFQIWRUR+L68eP5cnjx+/HuYCHzfyX95evL4MWEUAKCCJRwilGEJhyJZXVuT1fV1s3gqjU//TXXP+32R1nq9bv6cqbrnxW6DWm0mj6UQNOoxj+MGgEkIWREIWdlJe4PUuDm7rNVux16sVavNpK2LWWjUYx7HDQCTMF3osKIvjJlUmRdMBQBUDyHLcVUJWqtra6n3UGy122YRAAC5I2Q5zqtAyGq124nfwwIAwHWELMdduHDBLCqdlbU1syiRKpwjAEDxELIcl9dL91m5eu1a6mnC0AWmCwEADiJkOa7ueaV9IbzVbquEyFarxXtZAADnELIKoKwh4uo335hFqV395pvKfCQAACgGQlYB1D2vdCHi5q1bqn9P3fNkdcZ3uwAA0ETIKoi658nm1lYpgsQsyzVMs9zplOL8AADKgZBVIHXPk9X19Y8vixd0+vDmrVtWl2tYXV+Xu9vbhT0/AIDyKO22Ot39fbMolVarpTqtpSnwfen1enLY65k/OaVer8uFdtvK6NU03f19Oez1JAgClS2W8sK2OvHlcdwAMElpQxZwWuD7IiLiB4H5k/O8ej120A98X+VvTPL/1NJTeFjI47gBYBJCFgAAgAW8kwUAAGABIQsAAMACQhYAAIAFhCwAAAALCFkAAAAWELIAAAAsIGQBAABYQMgCAACwgJAFAABgASELAADAAkIWAACABYQsAAAACwhZAAAAFhCyAAAALCBkAQAAWHBmPB6PzcIsHD/dM4ugpPZFQ0RE5paXzJ+QMY12XvuiUYm6PNp5ZBalsrC1YRahwjSuQRGR+SsrZhEQKZeQNeoP5N3FdbMYymrNhsx1lmRhc0NqzY/BC9kZdg8kuHTdLE5s/sqKnHvwg1lcOm8X/2QWJVZrNmTx1a5ZjAp7d3FdRv2BWZzY4qtd+lEkxnRhiY36Azl+uif+pW/VRgkAAEA8hKwKGPUHcnTvkdoTHQAAiEbIqpBRfyD+pW8JWgAAZICQVTFh0AIAAHYRsipo1B/I+xt3zGIAAKCIkFVRw/0Dpg0BALCIkFVR4cvwAADADkJWhQ33D8wiAACghJBVYaP+QIZdghYAADYQsgAAACwgZFXc6A0vvwMAYAMhC0Ap1JoNOffX8u/xCKA4CFkACm9hc0MWX+3K3PKS+RMA5IaQBaCwas2G1J89lIWtDfMnAMjdmfF4PDYLbRv1B/Lu4rpZnJj29MDozUB+/fs/1Zc2qDUbMv/1ipztfGn+FNvozUA+vHwtx0/3zJ9mcu7BDzJ/ZcUshoJh90CCS9fN4sTmr6zIuQd67dxVbxf/ZBZNtbC5QbhCpHcX11UWXl58tSu1ZsMsBqYqdMia6yxJ/R8PzeKZhIt0aoWZWrMhi692zeLUjnYeqS4iSsiyh5CVTNyQFT5cMTWIOAhZyBMh6xO0jk8shZjjp3tqew/aOL7QqD9QC6u2hZ3nXGdJrSPNOmRlcb5rzYbUvmhYCThxQpb26NWweyAf9l+bxYVks26ihCHGdvtL4/jnPWdC1qg/kN/6b51vc7VmI9Z9oSh/j5zq47O+RghZE7j+9BNcvq4yrWkjZL2/ccfJzjaucHp31pt5liFLqz0kUWs2ZK6zJAubGyptfFrIijN6FY5CR52r0zQfWFyiXTefEob6Dy9fZ9724lrY3HAiZGn1BVmpP3s49Vobdg/k/Xd3VM5rHsLr4w9f/3nq36mBF98LKu3FbtOoP5Dg8vVCByw5dbPWCtq25RGw5NRN1r/0rRzt6E1hm+J8OXi087G+8jgPLrJdN8Pugby7uC5H9x45e85rzcbMD0oagsvXCxWwFjY3pl5rYWAsQt84SXh9BJeuW7k+TiNkFVTtc/dC1vsbd5ztcNMY9QfWblJajnbyv8mFoTS4rHsjqcX4cjAM9prvKZaJjQeGo51HhQgNmh9FpVW0PnGuszT1eivaiFwc2teHiZAFFS7c7G0Y9Qdy/POek3s8DrsHToWL4f6B2tQbo1e6wgeGWWl/eGPLXGdpatvJwrB7ULhR/aip9vff6Vzfrhn1B2p9l4mQhZm5drPXNuoPnOxc/vfef5lFuTt+OlsgjTN6dXqqCvGN+oOZRmWLdJ3/cfM/zKLM/frzP80ip9WfPZz6GkpwudhThFGG+wczXR+TELIwMxdv9trCOXxXuDwNkTaQRo1ehVODRX8fJE+zjMoW5Tqfv7IysQ1lydXr81OiRv6G3YNC/T1paX0kcRohCzMp6zThp7jyFO/6NETaQDpt9IqpQR2j/iDV5/bHT/cKc+6jpryyon2ztqXWbER+pV+297AmSdt3TUPIQmpFmj7QMOoPUo8CaEo7UpSlX/+uM1USjl5VqZ3Z9uFl8pBVlMBAwEou6gMB7Q9aXJfm+piGkIXUinCz15ZmFEBTUd6L+O3NW7MoMUav7EhTN6P/cb/NzXWW1Nf8K7uo5RqKNIKpJc31MQ0hC6kU5WZfJlV5L4LRK7vSjMgWod258LJ7kUQt1zCy+MWdy0b9geq9jZCFxKpys/+UvJ7oR/1Bod6LSNtRjU52g6hq+8rK6E2yuklTl1mKWqEc/yrObilVDFg2ELKQWJFu9mVRlQ6vKn8ndIRLfhCw4qk1G7KwuREZsKo4TWgLexdOoLUC7Cz7XU2jtShg0r0Lh92DxE/Befnw8rX6lyJx9hEMDZVWR57rLMkf/v3PZrGacO85jfZ+WtK2r7GPYK3ZkMVXu2bxRBr/Tzl189Jmq26SXvfT9pVMa/7KitQ+byRqI6Ekm/zm0Zdr3eNOq53sqSoicrbzpflzpM+a52Mfv3a/acuoP7Cyd2aSuo5CyJogjwszibxCVtGMTla61qhLySlkJfl/pjU6+XRZo02FkrZ9jY3F8wpZNvsiG3WT9LrXDFm1GJt9a8qjL9e6x4Vstq8y0LofhpLUdRSmC1FqtWZDvGc/mcUw1JqNj4s4drK58X2K9tNoWdRONjrOs240ec9+yixglUEtxjpWVbewtWFlJFkDIQulZ2sqp2xqzYb1EbNpNEYbyizPutFy7sEPaiMEVUHfFU/eD4mTELJQCWneYagiboDuqjUbTt5Ekij68eeBcxaPq30XIQuV8FnzvFmECejUYYurN0KXcc7iO/uVew/ThCwAKAhuuECx8HXhBHl8kZKE1tcUSb8yMg27B/Jh/3Vui3SGFjY3pp5nrTaX5Eu/In1deFpw+brKS+hJ277GF2y1En5deJrGF5iS4rrXqBsRkfPv/tsssi6Pvlyrv5Gcztlpo/7g92VE8uzna59//ABkGq37YpK6jkLImiCPCzMJrcaUtLMNaS+NMKvayVeEk861VptLEngIWcnavsaNnJAVT9LrXqNuJKfAkEdfrtXfSE7nLKR1n9ES1RdqHW+Suo7CdCESG3YP1DouLeHTFgBgdi7uH1rEPp6QhURGDu+h51LoA4CiOtp55GSgKWIfT8hCIq492QAAdNHP6yFkIREXn24AADo03vnD/yNkIZEiDtcCAOKhj9dFyEJsXHwAUG55LtNQRoQsAAAACwhZAAAAFrAY6QRa60BpLmp2mtaia0kWJdSot1qzIfNfr1g5J3OdpYn/XY1jlxiL4Z3GYqTJ2r7GgpcsRhpPkutelOpGclpYM4++XKu/kRzOmUYbi9qBYxbT2q3WfTFJXUdhJAuZWny1KwtbGzJ/ZUX9n9ZFAQBIZ/7KirU+fn5KwHIVIQuZKeIFAgCIb2Fz+v6CVUPIAgAAsICQBQAAYAEhCwCQiWF39g8qgCIhZAEAMvH+u9m/5ASKhJAFAMhEuLTB+xt3Pn5un8E/IE+skzVBHmurJHG0o7MeSJL1crTqrcjmE6xZxTpZydq+xlpMrJMVT5LrXpTqpuiStGfNvrKI62QVXZK6jsJIFgAAgAWELAAAAAsIWQAAABYQsgAAU811lswiADEQsgAAU5396kuzCEAMhCwAwFRnO4QsIA1CFgBgqs+a55kyrAhGLXURshBbrdmgowUqqNZsyLkHP6itHQR30cfrImQhkSwXxQTgjlqzIef+yvVfdrVmQxY2N8xipETIQiK1ZkPqzx7yRAtU0Nzykiy+2uUmXHILWxvUsZLcttXxL31rFic211myNrISXL4uv715axYn5j37yUogOX66p7KtzsLmRqLtNUKj/kCOn+7Jh5evVc5TUSRpc8PugcqGuEn+nxre37ijsq1O0ravsQ3JZ1+cT7S9TdHq6GjnkRz/PPuWJ2mv+9NG/YEM9w/kw8vXMuoPSt8PJGnPWvc4OdniJS+j/kCO7j2qRP2elqSuo+QSsgAAAMqO6UIAAAALCFkAAAAWELIAAAAsIGQBAABYQMgCAACwgJAFAABgASELAADAAkIWAACABYQsAAAACwhZAAAAFhCyAAAALCBkAQAAWEDIAgAAsICQBQAAYAEhCwAAwAJCFgAAgAWELAAAAAsIWQAAABYQsgAAACwgZAEAAFjwf51DxmTjxuU7AAAAAElFTkSuQmCC">
-  <div><h1>EMEA Delivery — H2 2026 Viewer</h1><div class="badge">🔒 Read-only · your file never leaves this browser · nothing is saved</div></div>
-  <div class="meta" id="meta">Web Viewer v0.1</div>
+  <div><h1 id="title">EMEA Delivery — Revenue Viewer</h1><div class="badge">🔒 Read-only · your file never leaves this browser · nothing is saved</div></div>
+  <div class="meta" id="meta">Web Viewer v0.2</div>
 </header>
 <nav id="nav" class="hidden">
   <button data-v="mgmt" class="active">Management</button>
@@ -82,7 +104,7 @@ select,input[type=search]{padding:8px 10px;border:1px solid var(--cg2);border-ra
 <main>
   <div id="load" class="drop">
     <p style="font-size:16px;margin-top:0"><b>Open your EMEA_Delivery_Dashboard workbook</b> (.xlsx / .xlsm / .xlsb)</p>
-    <p class="sub">Click Refresh Data in Excel and <b>save</b> first — the viewer shows the values from the last save.<br>The file is read only in this browser's memory. No upload, no storage; closing or refreshing the tab clears everything.</p>
+    <p class="sub">Click Refresh Data in Excel and <b>save</b> first — the viewer uses the values from the last save.<br>The file is read only in this browser's memory. No upload, no storage; closing or refreshing the tab clears everything.</p>
     <input type="file" id="file" accept=".xlsx,.xlsm,.xlsb" class="hidden">
     <button class="btn" id="pick">Open workbook</button>
     <p class="sub" style="margin-top:12px">…or drag &amp; drop the file here</p>
@@ -94,7 +116,8 @@ select,input[type=search]{padding:8px 10px;border:1px solid var(--cg2);border-ra
   <section id="v-unc" class="view hidden"></section>
   <section id="v-orders" class="view hidden"></section>
 </main>
-<div class="foot">Tech Mahindra · EMEA Delivery · Confidential — internal use only · Web Viewer v0.1</div>
+<div id="tip"></div>
+<div class="foot">Tech Mahindra · EMEA Delivery · Confidential — internal use only · Web Viewer v0.2</div>
 
 <script>/*! xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 var DO_NOT_EXPORT_CODEPAGE=true;var cptable={version:"1.15.0"};cptable[437]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[620]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàąçêëèïîćÄĄĘęłôöĆûùŚÖÜ¢Ł¥śƒŹŻóÓńŃźż¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[737]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρσςτυφχψ░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀ωάέήϊίόύϋώΆΈΉΊΌΎΏ±≥≤ΪΫ÷≈°∙·√ⁿ²■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[850]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜø£Ø×ƒáíóúñÑªº¿®¬½¼¡«»░▒▓│┤ÁÂÀ©╣║╗╝¢¥┐└┴┬├─┼ãÃ╚╔╩╦╠═╬¤ðÐÊËÈıÍÎÏ┘┌█▄¦Ì▀ÓßÔÒõÕµþÞÚÛÙýÝ¯´­±‗¾¶§÷¸°¨·¹³²■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[852]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäůćçłëŐőîŹÄĆÉĹĺôöĽľŚśÖÜŤťŁ×čáíóúĄąŽžĘę¬źČş«»░▒▓│┤ÁÂĚŞ╣║╗╝Żż┐└┴┬├─┼Ăă╚╔╩╦╠═╬¤đĐĎËďŇÍÎě┘┌█▄ŢŮ▀ÓßÔŃńňŠšŔÚŕŰýÝţ´­˝˛ˇ˘§÷¸°¨˙űŘř■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[857]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàåçêëèïîıÄÅÉæÆôöòûùİÖÜø£ØŞşáíóúñÑĞğ¿®¬½¼¡«»░▒▓│┤ÁÂÀ©╣║╗╝¢¥┐└┴┬├─┼ãÃ╚╔╩╦╠═╬¤ºªÊËÈ�ÍÎÏ┘┌█▄¦Ì▀ÓßÔÒõÕµ�×ÚÛÙìÿ¯´­±�¾¶§÷¸°¨·¹³²■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[861]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàåçêëèÐðÞÄÅÉæÆôöþûÝýÖÜø£Ø₧ƒáíóúÁÍÓÚ¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[865]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜø£Ø₧ƒáíóúñÑªº¿⌐¬½¼¡«¤░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[866]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмноп░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀рстуфхцчшщъыьэюяЁёЄєЇїЎў°∙·√№¤■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[874]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~€����…�����������‘’“”•–—�������� กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรฤลฦวศษสหฬอฮฯะัาำิีึืฺุู����฿เแโใไๅๆ็่้๊๋์ํ๎๏๐๑๒๓๔๕๖๗๘๙๚๛����",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[895]=function(){var e="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ČüéďäĎŤčěĚĹÍľǪÄÁÉžŽôöÓůÚýÖÜŠĽÝŘťáíóúňŇŮÔšřŕŔ¼§«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ",r=[],t={};for(var a=0;a!=e.length;++a){if(e.charCodeAt(a)!==65533)t[e.charAt(a)]=a;r[a]=e.charAt(a)}return{enc:t,dec:r}}();cptable[932]=function(){var e=[],r={},t=[],a;t[0]="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~���������������������������������｡｢｣､･ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝﾞﾟ��������������������������������".split("");for(a=0;a!=t[0].length;++a)if(t[0][a].charCodeAt(0)!==65533){r[t[0][a]]=0+a;e[0+a]=t[0][a]}t[129]="����������������������������������������������������������������　、。，．・：；？！゛゜´｀¨＾￣＿ヽヾゝゞ〃仝々〆〇ー―‐／＼～∥｜…‥‘’“”（）〔〕［］｛｝〈〉《》「」『』【】＋－±×�÷＝≠＜＞≦≧∞∴♂♀°′″℃￥＄￠￡％＃＆＊＠§☆★○●◎◇◆□■△▲▽▼※〒→←↑↓〓�����������∈∋⊆⊇⊂⊃∪∩��������∧∨￢⇒⇔∀∃�����������∠⊥⌒∂∇≡≒≪≫√∽∝∵∫∬�������Å‰♯♭♪†‡¶����◯���".split("");for(a=0;a!=t[129].length;++a)if(t[129][a].charCodeAt(0)!==65533){r[t[129][a]]=33024+a;e[33024+a]=t[129][a]}t[130]="�������������������������������������������������������������������������������０１２３４５６７８９�������ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ�������ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ����ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをん��������������".split("");for(a=0;a!=t[130].length;++a)if(t[130][a].charCodeAt(0)!==65533){r[t[130][a]]=33280+a;e[33280+a]=t[130][a]}t[131]="����������������������������������������������������������������ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミ�ムメモャヤュユョヨラリルレロヮワヰヱヲンヴヵヶ��������ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ��������αβγδεζηθικλμνξοπρστυφχψω�����������������������������������������".split("");for(a=0;a!=t[131].length;++a)if(t[131][a].charCodeAt(0)!==65533){r[t[131][a]]=33536+a;e[33536+a]=t[131][a]}t[132]="����������������������������������������������������������������АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ���������������абвгдеёжзийклмн�опрстуфхцчшщъыьэюя�������������─│┌┐┘└├┬┤┴┼━┃┏┓┛┗┣┳┫┻╋┠┯┨┷┿┝┰┥┸╂�����������������������������������������������������������������".split("");for(a=0;a!=t[132].length;++a)if(t[132][a].charCodeAt(0)!==65533){r[t[132][a]]=33792+a;e[33792+a]=t[132][a]}t[135]="����������������������������������������������������������������①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ�㍉㌔㌢㍍㌘㌧㌃㌶㍑㍗㌍㌦㌣㌫㍊㌻㎜㎝㎞㎎㎏㏄㎡��������㍻�〝〟№㏍℡㊤㊥㊦㊧㊨㈱㈲㈹㍾㍽㍼≒≡∫∮∑√⊥∠∟⊿∵∩∪���������������������������������������������������������������������������������������������������".split("");for(a=0;a!=t[135].length;++a)if(t[135][a].charCodeAt(0)!==65533){r[t[135][a]]=34560+a;e[34560+a]=t[135][a]}t[136]="���������������������������������������������������������������������������������������������������������������������������������������������������������������亜唖娃阿哀愛挨姶逢葵茜穐悪握渥旭葦芦鯵梓圧斡扱宛姐虻飴絢綾鮎或粟袷安庵按暗案闇鞍杏以伊位依偉囲夷委威尉惟意慰易椅為畏異移維緯胃萎衣謂違遺医井亥域育郁磯一壱溢逸稲茨芋鰯允印咽員因姻引飲淫胤蔭���".split("");for(a=0;a!=t[136].length;++a)if(t[136][a].charCodeAt(0)!==65533){r[t[136][a]]=34816+a;e[34816+a]=t[136][a]}t[137]="����������������������������������������������������������������院陰隠韻吋右宇烏羽迂雨卯鵜窺丑碓臼渦嘘唄欝蔚鰻姥厩浦瓜閏噂云運雲荏餌叡営嬰影映曳栄永泳洩瑛盈穎頴英衛詠鋭液疫益駅悦謁越閲榎厭円�園堰奄宴延怨掩援沿演炎焔煙燕猿縁艶苑薗遠鉛鴛塩於汚甥凹央奥往応押旺横欧殴王翁襖鴬鴎黄岡沖荻億屋憶臆桶牡乙俺卸恩温穏音下化仮何伽価佳加可嘉夏嫁家寡科暇果架歌河火珂禍禾稼箇花苛茄荷華菓蝦課嘩貨迦過霞蚊俄峨我牙画臥芽蛾賀雅餓駕介会解回塊壊廻快怪悔恢懐戒拐改���".split("");for(a=0;a!=t[137].length;++a)if(t[137][a].charCodeAt(0)!==65533){r[t[137][a]]=35072+a;e[35072+a]=t[137][a]}t[138]="����������������������������������������������������������������魁晦械海灰界皆絵芥蟹開階貝凱劾外咳害崖慨概涯碍蓋街該鎧骸浬馨蛙垣柿蛎鈎劃嚇各廓拡撹格核殻獲確穫覚角赫較郭閣隔革学岳楽額顎掛笠樫�橿梶鰍潟割喝恰括活渇滑葛褐轄且鰹叶椛樺鞄株兜竃蒲釜鎌噛鴨栢茅萱粥刈苅瓦乾侃冠寒刊勘勧巻喚堪姦完官寛干幹患感慣憾換敢柑桓棺款歓汗漢澗潅環甘監看竿管簡緩缶翰肝艦莞観諌貫還鑑間閑関陥韓館舘丸含岸巌玩癌眼岩翫贋雁頑顔願企伎危喜器基奇嬉寄岐希幾忌揮机旗既期棋棄���".split("");for(a=0;a!=t[138].length;++a)if(t[138][a].charCodeAt(0)!==65533){r[t[138][a]]=35328+a;e[35328+a]=t[138][a]}t[139]="����������������������������������������������������������������機帰毅気汽畿祈季稀紀徽規記貴起軌輝飢騎鬼亀偽儀妓宜戯技擬欺犠疑祇義蟻誼議掬菊鞠吉吃喫桔橘詰砧杵黍却客脚虐逆丘久仇休及吸宮弓急救�朽求汲泣灸球究窮笈級糾給旧牛去居巨拒拠挙渠虚許距鋸漁禦魚亨享京供侠僑兇競共凶協匡卿叫喬境峡強彊怯恐恭挟教橋況狂狭矯胸脅興蕎郷鏡響饗驚仰凝尭暁業局曲極玉桐粁僅勤均巾錦斤欣欽琴禁禽筋緊芹菌衿襟謹近金吟銀九倶句区狗玖矩苦躯駆駈駒具愚虞喰空偶寓遇隅串櫛釧屑屈���".split("");for(a=0;a!=t[139].length;++a)if(t[139][a].charCodeAt(0)!==65533){r[t[139][a]]=35584+a;e[35584+a]=t[139][a]}t[140]="����������������������������������������������������������������掘窟沓靴轡窪熊隈粂栗繰桑鍬勲君薫訓群軍郡卦袈祁係傾刑兄啓圭珪型契形径恵慶慧憩掲携敬景桂渓畦稽系経継繋罫茎荊蛍計詣警軽頚鶏芸迎鯨�劇戟撃激隙桁傑欠決潔穴結血訣月件倹倦健兼券剣喧圏堅嫌建憲懸拳捲検権牽犬献研硯絹県肩見謙賢軒遣鍵険顕験鹸元原厳幻弦減源玄現絃舷言諺限乎個古呼固姑孤己庫弧戸故枯湖狐糊袴股胡菰虎誇跨鈷雇顧鼓五互伍午呉吾娯後御悟梧檎瑚碁語誤護醐乞鯉交佼侯候倖光公功効勾厚口向���".split("");for(a=0;a!=t[140].length;++a)if(t[140][a].charCodeAt(0)!==65533){r[t[140][a]]=35840+a;e[35840+a]=t[140][a]}t[141]="����������������������������������������������������������������后喉坑垢好孔孝宏工巧巷幸広庚康弘恒慌抗拘控攻昂晃更杭校梗構江洪浩港溝甲皇硬稿糠紅紘絞綱耕考肯肱腔膏航荒行衡講貢購郊酵鉱砿鋼閤降�項香高鴻剛劫号合壕拷濠豪轟麹克刻告国穀酷鵠黒獄漉腰甑忽惚骨狛込此頃今困坤墾婚恨懇昏昆根梱混痕紺艮魂些佐叉唆嵯左差査沙瑳砂詐鎖裟坐座挫債催再最哉塞妻宰彩才採栽歳済災采犀砕砦祭斎細菜裁載際剤在材罪財冴坂阪堺榊肴咲崎埼碕鷺作削咋搾昨朔柵窄策索錯桜鮭笹匙冊刷���".split("");for(a=0;a!=t[141].length;++a)if(t[141][a].charCodeAt(0)!==65533){r[t[141][a]]=36096+a;e[36096+a]=t[141][a]}t[142]="����������������������������������������������������������������察拶撮擦札殺薩雑皐鯖捌錆鮫皿晒三傘参山惨撒散桟燦珊産算纂蚕讃賛酸餐斬暫残仕仔伺使刺司史嗣四士始姉姿子屍市師志思指支孜斯施旨枝止�死氏獅祉私糸紙紫肢脂至視詞詩試誌諮資賜雌飼歯事似侍児字寺慈持時次滋治爾璽痔磁示而耳自蒔辞汐鹿式識鴫竺軸宍雫七叱執失嫉室悉湿漆疾質実蔀篠偲柴芝屡蕊縞舎写射捨赦斜煮社紗者謝車遮蛇邪借勺尺杓灼爵酌釈錫若寂弱惹主取守手朱殊狩珠種腫趣酒首儒受呪寿授樹綬需囚収周���".split("");for(a=0;a!=t[142].length;++a)if(t[142][a].charCodeAt(0)!==65533){r[t[142][a]]=36352+a;e[36352+a]=t[142][a]}t[143]="����������������������������������������������������������������宗就州修愁拾洲秀秋終繍習臭舟蒐衆襲讐蹴輯週酋酬集醜什住充十従戎柔汁渋獣縦重銃叔夙宿淑祝縮粛塾熟出術述俊峻春瞬竣舜駿准循旬楯殉淳�準潤盾純巡遵醇順処初所暑曙渚庶緒署書薯藷諸助叙女序徐恕鋤除傷償勝匠升召哨商唱嘗奨妾娼宵将小少尚庄床廠彰承抄招掌捷昇昌昭晶松梢樟樵沼消渉湘焼焦照症省硝礁祥称章笑粧紹肖菖蒋蕉衝裳訟証詔詳象賞醤鉦鍾鐘障鞘上丈丞乗冗剰城場壌嬢常情擾条杖浄状畳穣蒸譲醸錠嘱埴飾���".split("");for(a=0;a!=t[143].length;++a)if(t[143][a].charCodeAt(0)!==65533){r[t[143][a]]=36608+a;e[36608+a]=t[143][a]}t[144]="����������������������������������������������������������������拭植殖燭織職色触食蝕辱尻伸信侵唇娠寝審心慎振新晋森榛浸深申疹真神秦紳臣芯薪親診身辛進針震人仁刃塵壬尋甚尽腎訊迅陣靭笥諏須酢図厨�逗吹垂帥推水炊睡粋翠衰遂酔錐錘随瑞髄崇嵩数枢趨雛据杉椙菅頗雀裾澄摺寸世瀬畝是凄制勢姓征性成政整星晴棲栖正清牲生盛精聖声製西誠誓請逝醒青静斉税脆隻席惜戚斥昔析石積籍績脊責赤跡蹟碩切拙接摂折設窃節説雪絶舌蝉仙先千占宣専尖川戦扇撰栓栴泉浅洗染潜煎煽旋穿箭線���".split("");for(a=0;a!=t[144].length;++a)if(t[144][a].charCodeAt(0)!==65533){r[t[144][a]]=36864+a;e[36864+a]=t[144][a]}t[145]="����������������������������������������������������������������繊羨腺舛船薦詮賎践選遷銭銑閃鮮前善漸然全禅繕膳糎噌塑岨措曾曽楚狙疏疎礎祖租粗素組蘇訴阻遡鼠僧創双叢倉喪壮奏爽宋層匝惣想捜掃挿掻�操早曹巣槍槽漕燥争痩相窓糟総綜聡草荘葬蒼藻装走送遭鎗霜騒像増憎臓蔵贈造促側則即息捉束測足速俗属賊族続卒袖其揃存孫尊損村遜他多太汰詑唾堕妥惰打柁舵楕陀駄騨体堆対耐岱帯待怠態戴替泰滞胎腿苔袋貸退逮隊黛鯛代台大第醍題鷹滝瀧卓啄宅托択拓沢濯琢託鐸濁諾茸凧蛸只���".split("");for(a=0;a!=t[145].length;++a)if(t[145][a].charCodeAt(0)!==65533){r[t[145][a]]=37120+a;e[37120+a]=t[145][a]}t[146]="����������������������������������������������������������������叩但達辰奪脱巽竪辿棚谷狸鱈樽誰丹単嘆坦担探旦歎淡湛炭短端箪綻耽胆蛋誕鍛団壇弾断暖檀段男談値知地弛恥智池痴稚置致蜘遅馳築畜竹筑蓄�逐秩窒茶嫡着中仲宙忠抽昼柱注虫衷註酎鋳駐樗瀦猪苧著貯丁兆凋喋寵帖帳庁弔張彫徴懲挑暢朝潮牒町眺聴脹腸蝶調諜超跳銚長頂鳥勅捗直朕沈珍賃鎮陳津墜椎槌追鎚痛通塚栂掴槻佃漬柘辻蔦綴鍔椿潰坪壷嬬紬爪吊釣鶴亭低停偵剃貞呈堤定帝底庭廷弟悌抵挺提梯汀碇禎程締艇訂諦蹄逓���".split("");for(a=0;a!=t[146].length;++a)if(t[146][a].charCodeAt(0)!==65533){r[t[146][a]]=37376+a;e[37376+a]=t[146][a]}t[147]="����������������������������������������������������������������邸鄭釘鼎泥摘擢敵滴的笛適鏑溺哲徹撤轍迭鉄典填天展店添纏甜貼転顛点伝殿澱田電兎吐堵塗妬屠徒斗杜渡登菟賭途都鍍砥砺努度土奴怒倒党冬�凍刀唐塔塘套宕島嶋悼投搭東桃梼棟盗淘湯涛灯燈当痘祷等答筒糖統到董蕩藤討謄豆踏逃透鐙陶頭騰闘働動同堂導憧撞洞瞳童胴萄道銅峠鴇匿得徳涜特督禿篤毒独読栃橡凸突椴届鳶苫寅酉瀞噸屯惇敦沌豚遁頓呑曇鈍奈那内乍凪薙謎灘捺鍋楢馴縄畷南楠軟難汝二尼弐迩匂賑肉虹廿日乳入���".split("");for(a=0;a!=t[147].length;++a)if(t[147][a].charCodeAt(0)!==65533){r[t[147][a]]=37632+a;e[37632+a]=t[147][a]}t[148]="����������������������������������������������������������������如尿韮任妊忍認濡禰祢寧葱猫熱年念捻撚燃粘乃廼之埜嚢悩濃納能脳膿農覗蚤巴把播覇杷波派琶破婆罵芭馬俳廃拝排敗杯盃牌背肺輩配倍培媒梅�楳煤狽買売賠陪這蝿秤矧萩伯剥博拍柏泊白箔粕舶薄迫曝漠爆縛莫駁麦函箱硲箸肇筈櫨幡肌畑畠八鉢溌発醗髪伐罰抜筏閥鳩噺塙蛤隼伴判半反叛帆搬斑板氾汎版犯班畔繁般藩販範釆煩頒飯挽晩番盤磐蕃蛮匪卑否妃庇彼悲扉批披斐比泌疲皮碑秘緋罷肥被誹費避非飛樋簸備尾微枇毘琵眉美���".split("");for(a=0;a!=t[148].length;++a)if(t[148][a].charCodeAt(0)!==65533){r[t[148][a]]=37888+a;e[37888+a]=t[148][a]}t[149]="����������������������������������������������������������������鼻柊稗匹疋髭彦膝菱肘弼必畢筆逼桧姫媛紐百謬俵彪標氷漂瓢票表評豹廟描病秒苗錨鋲蒜蛭鰭品彬斌浜瀕貧賓頻敏瓶不付埠夫婦富冨布府怖扶敷�斧普浮父符腐膚芙譜負賦赴阜附侮撫武舞葡蕪部封楓風葺蕗伏副復幅服福腹複覆淵弗払沸仏物鮒分吻噴墳憤扮焚奮粉糞紛雰文聞丙併兵塀幣平弊柄並蔽閉陛米頁僻壁癖碧別瞥蔑箆偏変片篇編辺返遍便勉娩弁鞭保舗鋪圃捕歩甫補輔穂募墓慕戊暮母簿菩倣俸包呆報奉宝峰峯崩庖抱捧放方朋���".split("");for(a=0;a!=t[149].length;++a)if(t[149][a].charCodeAt(0)!==65533){r[t[149][a]]=38144+a;e[38144+a]=t[149][a]}t[150]="����������������������������������������������������������������法泡烹砲縫胞芳萌蓬蜂褒訪豊邦鋒飽鳳鵬乏亡傍剖坊妨帽忘忙房暴望某棒冒紡肪膨謀貌貿鉾防吠頬北僕卜墨撲朴牧睦穆釦勃没殆堀幌奔本翻凡盆�摩磨魔麻埋妹昧枚毎哩槙幕膜枕鮪柾鱒桝亦俣又抹末沫迄侭繭麿万慢満漫蔓味未魅巳箕岬密蜜湊蓑稔脈妙粍民眠務夢無牟矛霧鵡椋婿娘冥名命明盟迷銘鳴姪牝滅免棉綿緬面麺摸模茂妄孟毛猛盲網耗蒙儲木黙目杢勿餅尤戻籾貰問悶紋門匁也冶夜爺耶野弥矢厄役約薬訳躍靖柳薮鑓愉愈油癒���".split("");for(a=0;a!=t[150].length;++a)if(t[150][a].charCodeAt(0)!==65533){r[t[150][a]]=38400+a;e[38400+a]=t[150][a]}t[151]="����������������������������������������������������������������諭輸唯佑優勇友宥幽悠憂揖有柚湧涌猶猷由祐裕誘遊邑郵雄融夕予余与誉輿預傭幼妖容庸揚揺擁曜楊様洋溶熔用窯羊耀葉蓉要謡踊遥陽養慾抑欲�沃浴翌翼淀羅螺裸来莱頼雷洛絡落酪乱卵嵐欄濫藍蘭覧利吏履李梨理璃痢裏裡里離陸律率立葎掠略劉流溜琉留硫粒隆竜龍侶慮旅虜了亮僚両凌寮料梁涼猟療瞭稜糧良諒遼量陵領力緑倫厘林淋燐琳臨輪隣鱗麟瑠塁涙累類令伶例冷励嶺怜玲礼苓鈴隷零霊麗齢暦歴列劣烈裂廉恋憐漣煉簾練聯���".split("");for(a=0;a!=t[151].length;++a)if(t[151][a].charCodeAt(0)!==65533){r[t[151][a]]=38656+a;e[38656+a]=t[151][a]}t[152]="����������������������������������������������������������������蓮連錬呂魯櫓炉賂路露労婁廊弄朗楼榔浪漏牢狼篭老聾蝋郎六麓禄肋録論倭和話歪賄脇惑枠鷲亙亘鰐詫藁蕨椀湾碗腕��������������������������������������������弌丐丕个丱丶丼丿乂乖乘亂亅豫亊舒弍于亞亟亠亢亰亳亶从仍仄仆仂仗仞仭仟价伉佚估佛佝佗佇佶侈侏侘佻佩佰侑佯來侖儘俔俟俎俘俛俑俚俐俤俥倚倨倔倪倥倅伜俶倡倩倬俾俯們倆偃假會偕偐偈做偖偬偸傀傚傅傴傲���".split("");for(a=0;a!=t[152].length;++a)if(t[152][a].charCodeAt(0)!==65533){r[t[152][a]]=38912+a;e[38912+a]=t[152][a]}t[153]="����������������������������������������������������������������僉僊傳僂僖僞僥僭僣僮價僵儉儁儂儖儕儔儚儡儺儷儼儻儿兀兒兌兔兢竸兩兪兮冀冂囘册冉冏冑冓冕冖冤冦冢冩冪冫决冱冲冰况冽凅凉凛几處凩凭�凰凵凾刄刋刔刎刧刪刮刳刹剏剄剋剌剞剔剪剴剩剳剿剽劍劔劒剱劈劑辨辧劬劭劼劵勁勍勗勞勣勦飭勠勳勵勸勹匆匈甸匍匐匏匕匚匣匯匱匳匸區卆卅丗卉卍凖卞卩卮夘卻卷厂厖厠厦厥厮厰厶參簒雙叟曼燮叮叨叭叺吁吽呀听吭吼吮吶吩吝呎咏呵咎呟呱呷呰咒呻咀呶咄咐咆哇咢咸咥咬哄哈咨���".split("");for(a=0;a!=t[153].length;++a)if(t[153][a].charCodeAt(0)!==65533){r[t[153][a]]=39168+a;e[39168+a]=t[153][a]}t[154]="����������������������������������������������������������������咫哂咤咾咼哘哥哦唏唔哽哮哭哺哢唹啀啣啌售啜啅啖啗唸唳啝喙喀咯喊喟啻啾喘喞單啼喃喩喇喨嗚嗅嗟嗄嗜嗤嗔嘔嗷嘖嗾嗽嘛嗹噎噐營嘴嘶嘲嘸�噫噤嘯噬噪嚆嚀嚊嚠嚔嚏嚥嚮嚶嚴囂嚼囁囃囀囈囎囑囓囗囮囹圀囿圄圉圈國圍圓團圖嗇圜圦圷圸坎圻址坏坩埀垈坡坿垉垓垠垳垤垪垰埃埆埔埒埓堊埖埣堋堙堝塲堡塢塋塰毀塒堽塹墅墹墟墫墺壞墻墸墮壅壓壑壗壙壘壥壜壤壟壯壺壹壻壼壽夂夊夐夛梦夥夬夭夲夸夾竒奕奐奎奚奘奢奠奧奬奩���".split("");for(a=0;a!=t[154].length;++a)if(t[154][a].charCodeAt(0)!==65533){r[t[154][a]]=39424+a;e[39424+a]=t[154][a]}t[155]="����������������������������������������������������������������奸妁妝佞侫妣妲姆姨姜妍姙姚娥娟娑娜娉娚婀婬婉娵娶婢婪媚媼媾嫋嫂媽嫣嫗嫦嫩嫖嫺嫻嬌嬋嬖嬲嫐嬪嬶嬾孃孅孀孑孕孚孛孥孩孰孳孵學斈孺宀�它宦宸寃寇寉寔寐寤實寢寞寥寫寰寶寳尅將專對尓尠尢尨尸尹屁屆屎屓屐屏孱屬屮乢屶屹岌岑岔妛岫岻岶岼岷峅岾峇峙峩峽峺峭嶌峪崋崕崗嵜崟崛崑崔崢崚崙崘嵌嵒嵎嵋嵬嵳嵶嶇嶄嶂嶢嶝嶬嶮嶽嶐嶷嶼巉巍巓巒巖巛巫已巵帋帚帙帑帛帶帷幄幃幀幎幗幔幟幢幤幇幵并幺麼广庠廁廂廈廐廏���".split("");for(a=0;a!=t[155].length;++a)if(t[155][a].charCodeAt(0)!==65533){r[t[155][a]]=39680+a;e[39680+a]=t[155][a]}t[156]="����������������������������������������������������������������廖廣廝廚廛廢廡廨廩廬廱廳廰廴廸廾弃弉彝彜弋弑弖弩弭弸彁彈彌彎弯彑彖彗彙彡彭彳彷徃徂彿徊很徑徇從徙徘徠徨徭徼忖忻忤忸忱忝悳忿怡恠�怙怐怩怎怱怛怕怫怦怏怺恚恁恪恷恟恊恆恍恣恃恤恂恬恫恙悁悍惧悃悚悄悛悖悗悒悧悋惡悸惠惓悴忰悽惆悵惘慍愕愆惶惷愀惴惺愃愡惻惱愍愎慇愾愨愧慊愿愼愬愴愽慂慄慳慷慘慙慚慫慴慯慥慱慟慝慓慵憙憖憇憬憔憚憊憑憫憮懌懊應懷懈懃懆憺懋罹懍懦懣懶懺懴懿懽懼懾戀戈戉戍戌戔戛���".split("");for(a=0;a!=t[156].length;++a)if(t[156][a].charCodeAt(0)!==65533){r[t[156][a]]=39936+a;e[39936+a]=t[156][a]}t[157]="����������������������������������������������������������������戞戡截戮戰戲戳扁扎扞扣扛扠扨扼抂抉找抒抓抖拔抃抔拗拑抻拏拿拆擔拈拜拌拊拂拇抛拉挌拮拱挧挂挈拯拵捐挾捍搜捏掖掎掀掫捶掣掏掉掟掵捫�捩掾揩揀揆揣揉插揶揄搖搴搆搓搦搶攝搗搨搏摧摯摶摎攪撕撓撥撩撈撼據擒擅擇撻擘擂擱擧舉擠擡抬擣擯攬擶擴擲擺攀擽攘攜攅攤攣攫攴攵攷收攸畋效敖敕敍敘敞敝敲數斂斃變斛斟斫斷旃旆旁旄旌旒旛旙无旡旱杲昊昃旻杳昵昶昴昜晏晄晉晁晞晝晤晧晨晟晢晰暃暈暎暉暄暘暝曁暹曉暾暼���".split("");for(a=0;a!=t[157].length;++a)if(t[157][a].charCodeAt(0)!==65533){r[t[157][a]]=40192+a;e[40192+a]=t[157][a]}t[158]="����������������������������������������������������������������曄暸曖曚曠昿曦曩曰曵曷朏朖朞朦朧霸朮朿朶杁朸朷杆杞杠杙杣杤枉杰枩杼杪枌枋枦枡枅枷柯枴柬枳柩枸柤柞柝柢柮枹柎柆柧檜栞框栩桀桍栲桎�梳栫桙档桷桿梟梏梭梔條梛梃檮梹桴梵梠梺椏梍桾椁棊椈棘椢椦棡椌棍棔棧棕椶椒椄棗棣椥棹棠棯椨椪椚椣椡棆楹楷楜楸楫楔楾楮椹楴椽楙椰楡楞楝榁楪榲榮槐榿槁槓榾槎寨槊槝榻槃榧樮榑榠榜榕榴槞槨樂樛槿權槹槲槧樅榱樞槭樔槫樊樒櫁樣樓橄樌橲樶橸橇橢橙橦橈樸樢檐檍檠檄檢檣���".split("");for(a=0;a!=t[158].length;++a)if(t[158][a].charCodeAt(0)!==65533){r[t[158][a]]=40448+a;e[40448+a]=t[158][a]}t[159]="����������������������������������������������������������������檗蘗檻櫃櫂檸檳檬櫞櫑櫟檪櫚櫪櫻欅蘖櫺欒欖鬱欟欸欷盜欹飮歇歃歉歐歙歔歛歟歡歸歹歿殀殄殃殍殘殕殞殤殪殫殯殲殱殳殷殼毆毋毓毟毬毫毳毯�麾氈氓气氛氤氣汞汕汢汪沂沍沚沁沛汾汨汳沒沐泄泱泓沽泗泅泝沮沱沾沺泛泯泙泪洟衍洶洫洽洸洙洵洳洒洌浣涓浤浚浹浙涎涕濤涅淹渕渊涵淇淦涸淆淬淞淌淨淒淅淺淙淤淕淪淮渭湮渮渙湲湟渾渣湫渫湶湍渟湃渺湎渤滿渝游溂溪溘滉溷滓溽溯滄溲滔滕溏溥滂溟潁漑灌滬滸滾漿滲漱滯漲滌���".split("");for(a=0;a!=t[159].length;++a)if(t[159][a].charCodeAt(0)!==65533){r[t[159][a]]=40704+a;e[40704+a]=t[159][a]}t[224]="����������������������������������������������������������������漾漓滷澆潺潸澁澀潯潛濳潭澂潼潘澎澑濂潦澳澣澡澤澹濆澪濟濕濬濔濘濱濮濛瀉瀋濺瀑瀁瀏濾瀛瀚潴瀝瀘瀟瀰瀾瀲灑灣炙炒炯烱炬炸炳炮烟烋烝�烙焉烽焜焙煥煕熈煦煢煌煖煬熏燻熄熕熨熬燗熹熾燒燉燔燎燠燬燧燵燼燹燿爍爐爛爨爭爬爰爲爻爼爿牀牆牋牘牴牾犂犁犇犒犖犢犧犹犲狃狆狄狎狒狢狠狡狹狷倏猗猊猜猖猝猴猯猩猥猾獎獏默獗獪獨獰獸獵獻獺珈玳珎玻珀珥珮珞璢琅瑯琥珸琲琺瑕琿瑟瑙瑁瑜瑩瑰瑣瑪瑶瑾璋璞璧瓊瓏瓔珱���".split("");for(a=0;a!=t[224].length;++a)if(t[224][a].charCodeAt(0)!==65533){r[t[224][a]]=57344+a;e[57344+a]=t[224][a]}t[225]="����������������������������������������������������������������瓠瓣瓧瓩瓮瓲瓰瓱瓸瓷甄甃甅甌甎甍甕甓甞甦甬甼畄畍畊畉畛畆畚畩畤畧畫畭畸當疆疇畴疊疉疂疔疚疝疥疣痂疳痃疵疽疸疼疱痍痊痒痙痣痞痾痿�痼瘁痰痺痲痳瘋瘍瘉瘟瘧瘠瘡瘢瘤瘴瘰瘻癇癈癆癜癘癡癢癨癩癪癧癬癰癲癶癸發皀皃皈皋皎皖皓皙皚皰皴皸皹皺盂盍盖盒盞盡盥盧盪蘯盻眈眇眄眩眤眞眥眦眛眷眸睇睚睨睫睛睥睿睾睹瞎瞋瞑瞠瞞瞰瞶瞹瞿瞼瞽瞻矇矍矗矚矜矣矮矼砌砒礦砠礪硅碎硴碆硼碚碌碣碵碪碯磑磆磋磔碾碼磅磊磬���".split("");for(a=0;a!=t[225].length;++a)if(t[225][a].charCodeAt(0)!==65533){r[t[225][a]]=57600+a;e[57600+a]=t[225][a]}t[226]="����������������������������������������������������������������磧磚磽磴礇礒礑礙礬礫祀祠祗祟祚祕祓祺祿禊禝禧齋禪禮禳禹禺秉秕秧秬秡秣稈稍稘稙稠稟禀稱稻稾稷穃穗穉穡穢穩龝穰穹穽窈窗窕窘窖窩竈窰�窶竅竄窿邃竇竊竍竏竕竓站竚竝竡竢竦竭竰笂笏笊笆笳笘笙笞笵笨笶筐筺笄筍笋筌筅筵筥筴筧筰筱筬筮箝箘箟箍箜箚箋箒箏筝箙篋篁篌篏箴篆篝篩簑簔篦篥籠簀簇簓篳篷簗簍篶簣簧簪簟簷簫簽籌籃籔籏籀籐籘籟籤籖籥籬籵粃粐粤粭粢粫粡粨粳粲粱粮粹粽糀糅糂糘糒糜糢鬻糯糲糴糶糺紆���".split("");for(a=0;a!=t[226].length;++a)if(t[226][a].charCodeAt(0)!==65533){r[t[226][a]]=57856+a;e[57856+a]=t[226][a]}t[227]="����������������������������������������������������������������紂紜紕紊絅絋紮紲紿紵絆絳絖絎絲絨絮絏絣經綉絛綏絽綛綺綮綣綵緇綽綫總綢綯緜綸綟綰緘緝緤緞緻緲緡縅縊縣縡縒縱縟縉縋縢繆繦縻縵縹繃縷�縲縺繧繝繖繞繙繚繹繪繩繼繻纃緕繽辮繿纈纉續纒纐纓纔纖纎纛纜缸缺罅罌罍罎罐网罕罔罘罟罠罨罩罧罸羂羆羃羈羇羌羔羞羝羚羣羯羲羹羮羶羸譱翅翆翊翕翔翡翦翩翳翹飜耆耄耋耒耘耙耜耡耨耿耻聊聆聒聘聚聟聢聨聳聲聰聶聹聽聿肄肆肅肛肓肚肭冐肬胛胥胙胝胄胚胖脉胯胱脛脩脣脯腋���".split("");for(a=0;a!=t[227].length;++a)if(t[227][a].charCodeAt(0)!==65533){r[t[227][a]]=58112+a;e[58112+a]=t[227][a]}t[228]="����������������������������������������������������������������隋腆脾腓腑胼腱腮腥腦腴膃膈膊膀膂膠膕膤膣腟膓膩膰膵膾膸膽臀臂膺臉臍臑臙臘臈臚臟臠臧臺臻臾舁舂舅與舊舍舐舖舩舫舸舳艀艙艘艝艚艟艤�艢艨艪艫舮艱艷艸艾芍芒芫芟芻芬苡苣苟苒苴苳苺莓范苻苹苞茆苜茉苙茵茴茖茲茱荀茹荐荅茯茫茗茘莅莚莪莟莢莖茣莎莇莊荼莵荳荵莠莉莨菴萓菫菎菽萃菘萋菁菷萇菠菲萍萢萠莽萸蔆菻葭萪萼蕚蒄葷葫蒭葮蒂葩葆萬葯葹萵蓊葢蒹蒿蒟蓙蓍蒻蓚蓐蓁蓆蓖蒡蔡蓿蓴蔗蔘蔬蔟蔕蔔蓼蕀蕣蕘蕈���".split("");for(a=0;a!=t[228].length;++a)if(t[228][a].charCodeAt(0)!==65533){r[t[228][a]]=58368+a;e[58368+a]=t[228][a]}t[229]="����������������������������������������������������������������蕁蘂蕋蕕薀薤薈薑薊薨蕭薔薛藪薇薜蕷蕾薐藉薺藏薹藐藕藝藥藜藹蘊蘓蘋藾藺蘆蘢蘚蘰蘿虍乕虔號虧虱蚓蚣蚩蚪蚋蚌蚶蚯蛄蛆蚰蛉蠣蚫蛔蛞蛩蛬�蛟蛛蛯蜒蜆蜈蜀蜃蛻蜑蜉蜍蛹蜊蜴蜿蜷蜻蜥蜩蜚蝠蝟蝸蝌蝎蝴蝗蝨蝮蝙蝓蝣蝪蠅螢螟螂螯蟋螽蟀蟐雖螫蟄螳蟇蟆螻蟯蟲蟠蠏蠍蟾蟶蟷蠎蟒蠑蠖蠕蠢蠡蠱蠶蠹蠧蠻衄衂衒衙衞衢衫袁衾袞衵衽袵衲袂袗袒袮袙袢袍袤袰袿袱裃裄裔裘裙裝裹褂裼裴裨裲褄褌褊褓襃褞褥褪褫襁襄褻褶褸襌褝襠襞���".split("");for(a=0;a!=t[229].length;++a)if(t[229][a].charCodeAt(0)!==65533){r[t[229][a]]=58624+a;e[58624+a]=t[229][a]}t[230]="����������������������������������������������������������������襦襤襭襪襯襴襷襾覃覈覊覓覘覡覩覦覬覯覲覺覽覿觀觚觜觝觧觴觸訃訖訐訌訛訝訥訶詁詛詒詆詈詼詭詬詢誅誂誄誨誡誑誥誦誚誣諄諍諂諚諫諳諧�諤諱謔諠諢諷諞諛謌謇謚諡謖謐謗謠謳鞫謦謫謾謨譁譌譏譎證譖譛譚譫譟譬譯譴譽讀讌讎讒讓讖讙讚谺豁谿豈豌豎豐豕豢豬豸豺貂貉貅貊貍貎貔豼貘戝貭貪貽貲貳貮貶賈賁賤賣賚賽賺賻贄贅贊贇贏贍贐齎贓賍贔贖赧赭赱赳趁趙跂趾趺跏跚跖跌跛跋跪跫跟跣跼踈踉跿踝踞踐踟蹂踵踰踴蹊���".split("");for(a=0;a!=t[230].length;++a)if(t[230][a].charCodeAt(0)!==65533){r[t[230][a]]=58880+a;e[58880+a]=t[230][a]}t[231]="����������������������������������������������������������������蹇蹉蹌蹐蹈蹙蹤蹠踪蹣蹕蹶蹲蹼躁躇躅躄躋躊躓躑躔躙躪躡躬躰軆躱躾軅軈軋軛軣軼軻軫軾輊輅輕輒輙輓輜輟輛輌輦輳輻輹轅轂輾轌轉轆轎轗轜�轢轣轤辜辟辣辭辯辷迚迥迢迪迯邇迴逅迹迺逑逕逡逍逞逖逋逧逶逵逹迸遏遐遑遒逎遉逾遖遘遞遨遯遶隨遲邂遽邁邀邊邉邏邨邯邱邵郢郤扈郛鄂鄒鄙鄲鄰酊酖酘酣酥酩酳酲醋醉醂醢醫醯醪醵醴醺釀釁釉釋釐釖釟釡釛釼釵釶鈞釿鈔鈬鈕鈑鉞鉗鉅鉉鉤鉈銕鈿鉋鉐銜銖銓銛鉚鋏銹銷鋩錏鋺鍄錮���".split("");for(a=0;a!=t[231].length;++a)if(t[231][a].charCodeAt(0)!==65533){r[t[231][a]]=59136+a;e[59136+a]=t[231][a]}t[232]="����������������������������������������������������������������錙錢錚錣錺錵錻鍜鍠鍼鍮鍖鎰鎬鎭鎔鎹鏖鏗鏨鏥鏘鏃鏝鏐鏈鏤鐚鐔鐓鐃鐇鐐鐶鐫鐵鐡鐺鑁鑒鑄鑛鑠鑢鑞鑪鈩鑰鑵鑷鑽鑚鑼鑾钁鑿閂閇閊閔閖閘閙�閠閨閧閭閼閻閹閾闊濶闃闍闌闕闔闖關闡闥闢阡阨阮阯陂陌陏陋陷陜陞陝陟陦陲陬隍隘隕隗險隧隱隲隰隴隶隸隹雎雋雉雍襍雜霍雕雹霄霆霈霓霎霑霏霖霙霤霪霰霹霽霾靄靆靈靂靉靜靠靤靦靨勒靫靱靹鞅靼鞁靺鞆鞋鞏鞐鞜鞨鞦鞣鞳鞴韃韆韈韋韜韭齏韲竟韶韵頏頌頸頤頡頷頽顆顏顋顫顯顰���".split("");for(a=0;a!=t[232].length;++a)if(t[232][a].charCodeAt(0)!==65533){r[t[232][a]]=59392+a;e[59392+a]=t[232][a]}t[233]="����������������������������������������������������������������顱顴顳颪颯颱颶飄飃飆飩飫餃餉餒餔餘餡餝餞餤餠餬餮餽餾饂饉饅饐饋饑饒饌饕馗馘馥馭馮馼駟駛駝駘駑駭駮駱駲駻駸騁騏騅駢騙騫騷驅驂驀驃�騾驕驍驛驗驟驢驥驤驩驫驪骭骰骼髀髏髑髓體髞髟髢髣髦髯髫髮髴髱髷髻鬆鬘鬚鬟鬢鬣鬥鬧鬨鬩鬪鬮鬯鬲魄魃魏魍魎魑魘魴鮓鮃鮑鮖鮗鮟鮠鮨鮴鯀鯊鮹鯆鯏鯑鯒鯣鯢鯤鯔鯡鰺鯲鯱鯰鰕鰔鰉鰓鰌鰆鰈鰒鰊鰄鰮鰛鰥鰤鰡鰰鱇鰲鱆鰾鱚鱠鱧鱶鱸鳧鳬鳰鴉鴈鳫鴃鴆鴪鴦鶯鴣鴟鵄鴕鴒鵁鴿鴾鵆鵈���".split("");for(a=0;a!=t[233].length;++a)if(t[233][a].charCodeAt(0)!==65533){r[t[233][a]]=59648+a;e[59648+a]=t[233][a]}t[234]="����������������������������������������������������������������鵝鵞鵤鵑鵐鵙鵲鶉鶇鶫鵯鵺鶚鶤鶩鶲鷄鷁鶻鶸鶺鷆鷏鷂鷙鷓鷸鷦鷭鷯鷽鸚鸛鸞鹵鹹鹽麁麈麋麌麒麕麑麝麥麩麸麪麭靡黌黎黏黐黔黜點黝黠黥黨黯�黴黶黷黹黻黼黽鼇鼈皷鼕鼡鼬鼾齊齒齔齣齟齠齡齦齧齬齪齷齲齶龕龜龠堯槇遙瑤凜熙�������������������������������������������������������������������������������������������".split("");for(a=0;a!=t[234].length;++a)if(t[234][a].charCodeAt(0)!==65533){r[t[234][a]]=59904+a;e[59904+a]=t[234][a]}t[237]="����������������������������������������������������������������纊褜鍈銈蓜俉炻昱棈鋹曻彅丨仡仼伀伃伹佖侒侊侚侔俍偀倢俿倞偆偰偂傔僴僘兊兤冝冾凬刕劜劦勀勛匀匇匤卲厓厲叝﨎咜咊咩哿喆坙坥垬埈埇﨏�塚增墲夋奓奛奝奣妤妺孖寀甯寘寬尞岦岺峵崧嵓﨑嵂嵭嶸嶹巐弡弴彧德忞恝悅悊惞惕愠惲愑愷愰憘戓抦揵摠撝擎敎昀昕昻昉昮昞昤晥晗晙晴晳暙暠暲暿曺朎朗杦枻桒柀栁桄棏﨓楨﨔榘槢樰橫橆橳橾櫢櫤毖氿汜沆汯泚洄涇浯涖涬淏淸淲淼渹湜渧渼溿澈澵濵瀅瀇瀨炅炫焏焄煜煆煇凞燁燾犱���".split("");for(a=0;a!=t[237].length;++a)if(t[237][a].charCodeAt(0)!==65533){r[t[237][a]]=60672+a;e[60672+a]=t[237][a]}t[238]="����������������������������������������������������������������犾猤猪獷玽珉珖珣珒琇珵琦琪琩琮瑢璉璟甁畯皂皜皞皛皦益睆劯砡硎硤硺礰礼神祥禔福禛竑竧靖竫箞精絈絜綷綠緖繒罇羡羽茁荢荿菇菶葈蒴蕓蕙�蕫﨟薰蘒﨡蠇裵訒訷詹誧誾諟諸諶譓譿賰賴贒赶﨣軏﨤逸遧郞都鄕鄧釚釗釞釭釮釤釥鈆鈐鈊鈺鉀鈼鉎鉙鉑鈹鉧銧鉷鉸鋧鋗鋙鋐﨧鋕鋠鋓錥錡鋻﨨錞鋿錝錂鍰鍗鎤鏆鏞鏸鐱鑅鑈閒隆﨩隝隯霳霻靃靍靏靑靕顗顥飯飼餧館馞驎髙髜魵魲鮏鮱鮻鰀鵰鵫鶴鸙黑��ⅰⅱⅲⅳⅴⅵⅶⅷⅸⅹ￢￤＇＂���".split("");for(a=0;a!=t[238].length;++a)if(t[238][a].charCodeAt(0)!==65533){r[t[238][a]]=60928+a;e[60928+a]=t[238][a]}t[250]="����������������������������������������������������������������ⅰⅱⅲⅳⅴⅵⅶⅷⅸⅹⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ￢￤＇＂㈱№℡∵纊褜鍈銈蓜俉炻昱棈鋹曻彅丨仡仼伀伃伹佖侒侊侚侔俍偀倢俿倞偆偰偂傔僴僘兊�兤冝冾凬刕劜劦勀勛匀匇匤卲厓厲叝﨎咜咊咩哿喆坙坥垬埈埇﨏塚增墲夋奓奛奝奣妤妺孖寀甯寘寬尞岦岺峵崧嵓﨑嵂嵭嶸嶹巐弡弴彧德忞恝悅悊惞惕愠惲愑愷愰憘戓抦揵摠撝擎敎昀昕昻昉昮昞昤晥晗晙晴晳暙暠暲暿曺朎朗杦枻桒柀栁桄棏﨓楨﨔榘槢樰橫橆橳橾櫢櫤毖氿汜沆汯泚洄涇浯���".split("");for(a=0;a!=t[250].length;++a)if(t[250][a].charCodeAt(0)!==65533){r[t[250][a]]=64e3+a;e[64e3+a]=t[250][a]}t[251]="����������������������������������������������������������������涖涬淏淸淲淼渹湜渧渼溿澈澵濵瀅瀇瀨炅炫焏焄煜煆煇凞燁燾犱犾猤猪獷玽珉珖珣珒琇珵琦琪琩琮瑢璉璟甁畯皂皜皞皛皦益睆劯砡硎硤硺礰礼神�祥禔福禛竑竧靖竫箞精絈絜綷綠緖繒罇羡羽茁荢荿菇菶葈蒴蕓蕙蕫﨟薰蘒﨡蠇裵訒訷詹誧誾諟諸諶譓譿賰賴贒赶﨣軏﨤逸遧郞都鄕鄧釚釗釞釭釮釤釥鈆鈐鈊鈺鉀鈼鉎鉙鉑鈹鉧銧鉷鉸鋧鋗鋙鋐﨧鋕鋠鋓錥錡鋻﨨錞鋿錝錂鍰鍗鎤鏆鏞鏸鐱鑅鑈閒隆﨩隝隯霳霻靃靍靏靑靕顗顥飯飼餧館馞驎髙���".split("");for(a=0;a!=t[251].length;++a)if(t[251][a].charCodeAt(0)!==65533){r[t[251][a]]=64256+a;e[64256+a]=t[251][a]}t[252]="����������������������������������������������������������������髜魵魲鮏鮱鮻鰀鵰鵫鶴鸙黑������������������������������������������������������������������������������������������������������������������������������������������������������������������������������������".split("");for(a=0;a!=t[252].length;++a)if(t[252][a].charCodeAt(0)!==65533){r[t[252][a]]=64512+a;e[64512+a]=t[252][a]}return{enc:r,dec:e}}();cptable[936]=function(){var e=[],r={},t=[],a;t[0]="\0\b\t\n\x0B\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~€�������������������������������������������������������������������������������������������������������������������������������".split("");for(a=0;a!=t[0].length;++a)if(t[0][a].charCodeAt(0)!==65533){r[t[0][a]]=0+a;e[0+a]=t[0][a]}t[129]="����������������������������������������������������������������丂丄丅丆丏丒丗丟丠両丣並丩丮丯丱丳丵丷丼乀乁乂乄乆乊乑乕乗乚乛乢乣乤乥乧乨乪乫乬乭乮乯乲乴乵乶乷乸乹乺乻乼乽乿亀亁亂亃亄亅亇亊�亐亖亗亙亜亝亞亣亪亯亰亱亴亶亷亸亹亼亽亾仈仌仏仐仒仚仛仜仠仢仦仧仩仭仮仯仱仴仸仹仺仼仾伀伂伃伄伅伆伇伈伋伌伒伓伔伕伖伜伝伡伣伨伩伬伭伮伱伳伵伷伹伻伾伿佀佁佂佄佅佇佈佉佊佋佌佒佔佖佡佢佦佨佪佫佭佮佱佲併佷佸佹佺佽侀侁侂侅來侇侊侌侎侐侒侓侕侖侘侙侚侜侞侟価侢�".split("");for(a=0;a!=t[129].length;++a)if(t[129][a].charCodeAt(0)!==65533){r[t[129][a]]=33024+a;e[33024+a]=t[129][a]}t[130]="����������������������������������������������������������������侤侫侭侰侱侲侳侴侶侷侸侹侺侻侼侽侾俀俁係俆俇俈俉俋俌俍俒俓俔俕俖俙俛俠俢俤俥俧俫俬俰俲俴俵俶俷俹俻俼俽俿倀倁倂倃倄倅倆倇倈倉倊�個倎倐們倓倕倖倗倛倝倞倠倢倣値倧倫倯倰倱倲倳倴倵倶倷倸倹倻倽倿偀偁偂偄偅偆偉偊偋偍偐偑偒偓偔偖偗偘偙偛偝偞偟偠偡偢偣偤偦偧偨偩偪偫偭偮偯偰偱偲偳側偵偸偹偺偼偽傁傂傃傄傆傇傉傊傋傌傎傏傐傑傒傓傔傕傖傗傘備傚傛傜傝傞傟傠傡傢傤傦傪傫傭傮傯傰傱傳傴債傶傷傸傹傼�".split("");for(a=0;a!=t[130].length;++a)if(t[130][a].charCodeAt(0)!==65533){r[t[130][a]]=33280+a;e[33280+a]=t[130][a]}t[131]="����������������������������������������������������������������傽傾傿僀僁僂僃僄僅僆僇僈僉僊僋僌働僎僐僑僒僓僔僕僗僘僙僛僜僝僞僟僠僡僢僣僤僥僨僩僪僫僯僰僱僲僴僶僷僸價僺僼僽僾僿儀儁儂儃億儅儈�儉儊儌儍儎儏儐儑儓儔儕儖儗儘儙儚儛儜儝儞償儠儢儣儤儥儦儧儨儩優儫儬儭儮儯儰儱儲儳儴儵儶儷儸儹儺儻儼儽儾兂兇兊兌兎兏児兒兓兗兘兙兛兝兞兟兠兡兣兤兦內兩兪兯兲兺兾兿冃冄円冇冊冋冎冏冐冑冓冔冘冚冝冞冟冡冣冦冧冨冩冪冭冮冴冸冹冺冾冿凁凂凃凅凈凊凍凎凐凒凓凔凕凖凗�".split("");for(a=0;a!=t[131].length;++a)if(t[131][a].charCodeAt(0)!==65533){r[t[131][a]]=33536+a;e[33536+a]=t[131][a]}t[132]="����������������������������������������������������������������凘凙凚凜凞凟凢凣凥処凧凨凩凪凬凮凱凲凴凷凾刄刅刉刋刌刏刐刓刔刕刜刞刟刡刢刣別刦刧刪刬刯刱刲刴刵刼刾剄剅剆則剈剉剋剎剏剒剓剕剗剘�剙剚剛剝剟剠剢剣剤剦剨剫剬剭剮剰剱剳剴創剶剷剸剹剺剻剼剾劀劃劄劅劆劇劉劊劋劌劍劎劏劑劒劔劕劖劗劘劙劚劜劤劥劦劧劮劯劰労劵劶劷劸効劺劻劼劽勀勁勂勄勅勆勈勊勌勍勎勏勑勓勔動勗務勚勛勜勝勞勠勡勢勣勥勦勧勨勩勪勫勬勭勮勯勱勲勳勴勵勶勷勸勻勼勽匁匂匃匄匇匉匊匋匌匎�".split("");for(a=0;a!=t[132].length;++a)if(t[132][a].charCodeAt(0)!==65533){r[t[132][a]]=33792+a;e[33792+a]=t[132][a]}t[133]="����������������������������������������������������������������匑匒匓匔匘匛匜匞匟匢匤匥匧匨匩匫匬匭匯匰匱匲匳匴匵匶匷匸匼匽區卂卄卆卋卌卍卐協単卙卛卝卥卨卪卬卭卲卶卹卻卼卽卾厀厁厃厇厈厊厎厏�厐厑厒厓厔厖厗厙厛厜厞厠厡厤厧厪厫厬厭厯厰厱厲厳厴厵厷厸厹厺厼厽厾叀參叄叅叆叇収叏叐叒叓叕叚叜叝叞叡叢叧叴叺叾叿吀吂吅吇吋吔吘吙吚吜吢吤吥吪吰吳吶吷吺吽吿呁呂呄呅呇呉呌呍呎呏呑呚呝呞呟呠呡呣呥呧呩呪呫呬呭呮呯呰呴呹呺呾呿咁咃咅咇咈咉咊咍咑咓咗咘咜咞咟咠咡�".split("");for(a=0;a!=t[133].length;++a)if(t[133][a].charCodeAt(0)!==65533){r[t[133][a]]=34048+a;e[34048+a]=t[133][a]}t[134]="����������������������������������������������������������������咢咥咮咰咲咵咶咷咹咺咼咾哃哅哊哋哖哘哛哠員哢哣哤哫哬哯哰哱哴哵哶哷哸哹哻哾唀唂唃唄唅唈唊唋唌唍唎唒唓唕唖唗唘唙唚唜唝唞唟唡唥唦�唨唩唫唭唲唴唵唶唸唹唺唻唽啀啂啅啇啈啋啌啍啎問啑啒啓啔啗啘啙啚啛啝啞啟啠啢啣啨啩啫啯啰啱啲啳啴啹啺啽啿喅喆喌喍喎喐喒喓喕喖喗喚喛喞喠喡喢喣喤喥喦喨喩喪喫喬喭單喯喰喲喴営喸喺喼喿嗀嗁嗂嗃嗆嗇嗈嗊嗋嗎嗏嗐嗕嗗嗘嗙嗚嗛嗞嗠嗢嗧嗩嗭嗮嗰嗱嗴嗶嗸嗹嗺嗻嗼嗿嘂嘃嘄嘅�".split("");for(a=0;a!=t[134].length;++a)if(t[134][a].charCodeAt(0)!==65533){r[t[134][a]]=34304+a;e[34304+a]=t[134][a]}t[135]="����������������������������������������������������������������嘆嘇嘊嘋嘍嘐嘑嘒嘓嘔嘕嘖嘗嘙嘚嘜嘝嘠嘡嘢嘥嘦嘨嘩嘪嘫嘮嘯嘰嘳嘵嘷嘸嘺嘼嘽嘾噀噁噂噃噄噅噆噇噈噉噊噋噏噐噑噒噓噕噖噚噛噝噞噟噠噡�噣噥噦噧噭噮噯噰噲噳噴噵噷噸噹噺噽噾噿嚀嚁嚂嚃嚄嚇嚈嚉嚊嚋嚌嚍嚐嚑嚒嚔嚕嚖嚗嚘嚙嚚嚛嚜嚝嚞嚟嚠嚡嚢嚤嚥嚦嚧嚨嚩嚪嚫嚬嚭嚮嚰嚱嚲嚳嚴嚵嚶嚸嚹嚺嚻嚽嚾嚿囀囁囂囃囄囅囆囇囈囉囋囌囍囎囏囐囑囒囓囕囖囘囙囜団囥囦囧囨囩囪囬囮囯囲図囶囷囸囻囼圀圁圂圅圇國圌圍圎圏圐圑�".split("");for(a=0;a!=t[135].length;++a)if(t[135][a].charCodeAt(0)!==65533){r[t[135][a]]=34560+a;e[34560+a]=t[135][a]}t[136]="����������������������������������������������������������������園圓圔圕圖圗團圙圚圛圝圞圠圡圢圤圥圦圧圫圱圲圴圵圶圷圸圼圽圿坁坃坄坅坆坈坉坋坒坓坔坕坖坘坙坢坣坥坧坬坮坰坱坲坴坵坸坹坺坽坾坿垀�垁垇垈垉垊垍垎垏垐垑垔垕垖垗垘垙垚垜垝垞垟垥垨垪垬垯垰垱垳垵垶垷垹垺垻垼垽垾垿埀埁埄埅埆埇埈埉埊埌埍埐埑埓埖埗埛埜埞埡埢埣埥埦埧埨埩埪埫埬埮埰埱埲埳埵埶執埻埼埾埿堁堃堄堅堈堉堊堌堎堏堐堒堓堔堖堗堘堚堛堜堝堟堢堣堥堦堧堨堩堫堬堭堮堯報堲堳場堶堷堸堹堺堻堼堽�".split("");for(a=0;a!=t[136].length;++a)if(t[136][a].charCodeAt(0)!==65533){r[t[136][a]]=34816+a;e[34816+a]=t[136][a]}t[137]="����������������������������������������������������������������堾堿塀塁塂塃塅塆塇塈塉塊塋塎塏塐塒塓塕塖塗塙塚塛塜塝塟塠塡塢塣塤塦塧塨塩塪塭塮塯塰塱塲塳塴塵塶塷塸塹塺塻塼塽塿墂墄墆墇墈墊墋墌�墍墎墏墐墑墔墕墖増墘墛墜墝墠墡墢墣墤墥墦墧墪墫墬墭墮墯墰墱墲墳墴墵墶墷墸墹墺墻墽墾墿壀壂壃壄壆壇壈壉壊壋壌壍壎壏壐壒壓壔壖壗壘壙壚壛壜壝壞壟壠壡壢壣壥壦壧壨壩壪壭壯壱売壴壵壷壸壺壻壼壽壾壿夀夁夃夅夆夈変夊夋夌夎夐夑夒夓夗夘夛夝夞夠夡夢夣夦夨夬夰夲夳夵夶夻�".split("");for(a=0;a!=t[137].length;++a)if(t[137][a].charCodeAt(0)!==65533){r[t[137][a]]=35072+a;e[35072+a]=t[137][a]}t[138]="����������������������������������������������������������������夽夾夿奀奃奅奆奊奌奍奐奒奓奙奛奜奝奞奟奡奣奤奦奧奨奩奪奫奬奭奮奯奰奱奲奵奷奺奻奼奾奿妀妅妉妋妌妎妏妐妑妔妕妘妚妛妜妝妟妠妡妢妦�妧妬妭妰妱妳妴妵妶妷妸妺妼妽妿姀姁姂姃姄姅姇姈姉姌姍姎姏姕姖姙姛姞姟姠姡姢姤姦姧姩姪姫姭姮姯姰姱姲姳姴姵姶姷姸姺姼姽姾娀娂娊娋娍娎娏娐娒娔娕娖娗娙娚娛娝娞娡娢娤娦娧娨娪娫娬娭娮娯娰娳娵娷娸娹娺娻娽娾娿婁婂婃婄婅婇婈婋婌婍婎婏婐婑婒婓婔婖婗婘婙婛婜婝婞婟婠�".split("");for(a=0;a!=t[138].length;++a)if(t[138][a].charCodeAt(0)!==65533){r[t[138][a]]=35328+a;e[35328+a]=t[138][a]}t[139]="����������������������������������������������������������������婡婣婤婥婦婨婩婫婬婭婮婯婰婱婲婳婸婹婻婼婽婾媀媁媂媃媄媅媆媇媈媉媊媋媌媍媎媏媐媑媓媔媕媖媗媘媙媜媝媞媟媠媡媢媣媤媥媦媧媨媩媫媬�媭媮媯媰媱媴媶媷媹媺媻媼媽媿嫀嫃嫄嫅嫆嫇嫈嫊嫋嫍嫎嫏嫐嫑嫓嫕嫗嫙嫚嫛嫝嫞嫟嫢嫤嫥嫧嫨嫪嫬嫭嫮嫯嫰嫲嫳嫴嫵嫶嫷嫸嫹嫺嫻嫼嫽嫾嫿嬀嬁嬂嬃嬄嬅嬆嬇嬈嬊嬋嬌嬍嬎嬏嬐嬑嬒嬓嬔嬕嬘嬙嬚嬛嬜嬝嬞嬟嬠嬡嬢嬣嬤嬥嬦嬧嬨嬩嬪嬫嬬嬭嬮嬯嬰嬱嬳嬵嬶嬸嬹嬺嬻嬼嬽嬾嬿孁孂孃孄孅孆孇�".split("");for(a=0;a!=t[139].length;++a)if(t[139][a].charCodeAt(0)!==65533){r[t[139][a]]=35584+a;e[35584+a]=t[139][a]}t[140]="����������������������������������������������������������������孈孉孊孋孌孍孎孏孒孖孞孠孡孧孨孫孭孮孯孲孴孶孷學孹孻孼孾孿宂宆宊宍宎宐宑宒宔宖実宧宨宩宬宭宮宯宱宲宷宺宻宼寀寁寃寈寉寊寋寍寎寏�寑寔寕寖寗寘寙寚寛寜寠寢寣實寧審寪寫寬寭寯寱寲寳寴寵寶寷寽対尀専尃尅將專尋尌對導尐尒尓尗尙尛尞尟尠尡尣尦尨尩尪尫尭尮尯尰尲尳尵尶尷屃屄屆屇屌屍屒屓屔屖屗屘屚屛屜屝屟屢層屧屨屩屪屫屬屭屰屲屳屴屵屶屷屸屻屼屽屾岀岃岄岅岆岇岉岊岋岎岏岒岓岕岝岞岟岠岡岤岥岦岧岨�".split("");for(a=0;a!=t[140].length;++a)if(t[140][a].charCodeAt(0)!==65533){r[t[140][a]]=35840+a;e[35840+a]=t[140][a]}t[141]="����������������������������������������������������������������岪岮岯岰岲岴岶岹岺岻岼岾峀峂峃峅峆峇峈峉峊峌峍峎峏峐峑峓峔峕峖峗峘峚峛峜峝峞峟峠峢峣峧峩峫峬峮峯峱峲峳峴峵島峷峸峹峺峼峽峾峿崀�崁崄崅崈崉崊崋崌崍崏崐崑崒崓崕崗崘崙崚崜崝崟崠崡崢崣崥崨崪崫崬崯崰崱崲崳崵崶崷崸崹崺崻崼崿嵀嵁嵂嵃嵄嵅嵆嵈嵉嵍嵎嵏嵐嵑嵒嵓嵔嵕嵖嵗嵙嵚嵜嵞嵟嵠嵡嵢嵣嵤嵥嵦嵧嵨嵪嵭嵮嵰嵱嵲嵳嵵嵶嵷嵸嵹嵺嵻嵼嵽嵾嵿嶀嶁嶃嶄嶅嶆嶇嶈嶉嶊嶋嶌嶍嶎嶏嶐嶑嶒嶓嶔嶕嶖嶗嶘嶚嶛嶜嶞嶟嶠�".split("");for(a=0;a!=t[141].length;++a)if(t[141][a].charCodeAt(0)!==65533){r[t[141][a]]=36096+a;e[36096+a]=t[141][a]}t[142]="����������������������������������������������������������������嶡嶢嶣嶤嶥嶦嶧嶨嶩嶪嶫嶬嶭嶮嶯嶰嶱嶲嶳嶴嶵嶶嶸嶹嶺嶻嶼嶽嶾嶿巀巁巂巃巄巆巇巈巉巊巋巌巎巏巐巑巒巓巔巕巖巗巘巙巚巜巟巠巣巤巪巬巭�巰巵巶巸巹巺巻巼巿帀帄帇帉帊帋帍帎帒帓帗帞帟帠帡帢帣帤帥帨帩帪師帬帯帰帲帳帴帵帶帹帺帾帿幀幁幃幆幇幈幉幊幋幍幎幏幐幑幒幓幖幗幘幙幚幜幝幟幠幣幤幥幦幧幨幩幪幫幬幭幮幯幰幱幵幷幹幾庁庂広庅庈庉庌庍庎庒庘庛庝庡庢庣庤庨庩庪庫庬庮庯庰庱庲庴庺庻庼庽庿廀廁廂廃廄廅�".split("");for(a=0;a!=t[142].length;++a)if(t[142][a].charCodeAt(0)!==65533){r[t[142][a]]=36352+a;e[36352+a]=t[142][a]}t[143]="����������������������������������������������������������������廆廇廈廋廌廍廎廏廐廔廕廗廘廙廚廜廝廞廟廠廡廢廣廤廥廦廧廩廫廬廭廮廯廰廱廲廳廵廸廹廻廼廽弅弆弇弉弌弍弎弐弒弔弖弙弚弜弝弞弡弢弣弤�弨弫弬弮弰弲弳弴張弶強弸弻弽弾弿彁彂彃彄彅彆彇彈彉彊彋彌彍彎彏彑彔彙彚彛彜彞彟彠彣彥彧彨彫彮彯彲彴彵彶彸彺彽彾彿徃徆徍徎徏徑従徔徖徚徛徝從徟徠徢徣徤徥徦徧復徫徬徯徰徱徲徳徴徶徸徹徺徻徾徿忀忁忂忇忈忊忋忎忓忔忕忚忛応忞忟忢忣忥忦忨忩忬忯忰忲忳忴忶忷忹忺忼怇�".split("");for(a=0;a!=t[143].length;++a)if(t[143][a].charCodeAt(0)!==65533){r[t[143][a]]=36608+a;e[36608+a]=t[143][a]}t[144]="����������������������������������������������������������������怈怉怋怌怐怑怓怗怘怚怞怟怢怣怤怬怭怮怰怱怲怳怴怶怷怸怹怺怽怾恀恄恅恆恇恈恉恊恌恎恏恑恓恔恖恗恘恛恜恞恟恠恡恥恦恮恱恲恴恵恷恾悀�悁悂悅悆悇悈悊悋悎悏悐悑悓悕悗悘悙悜悞悡悢悤悥悧悩悪悮悰悳悵悶悷悹悺悽悾悿惀惁惂惃惄惇惈惉惌惍惎惏惐惒惓惔惖惗惙惛惞惡惢惣惤惥惪惱惲惵惷惸惻惼惽惾惿愂愃愄愅愇愊愋愌愐愑愒愓愔愖愗愘愙愛愜愝愞愡愢愥愨愩愪愬愭愮愯愰愱愲愳愴愵愶愷愸愹愺愻愼愽愾慀慁慂慃慄慅慆�".split("");for(a=0;a!=t[144].length;++a)if(t[144][a].charCodeAt(0)!==65533){r[t[144][a]]=36864+a;e[36864+a]=t[144][a]}t[145]="����������������������������������������������������������������慇慉態慍慏慐慒慓慔慖慗慘慙慚慛慜慞慟慠慡慣慤慥慦慩慪慫慬慭慮慯慱慲慳慴慶慸慹慺慻慼慽慾慿憀憁憂憃憄憅憆憇憈憉憊憌憍憏憐憑憒憓憕�憖憗憘憙憚憛憜憞憟憠憡憢憣憤憥憦憪憫憭憮憯憰憱憲憳憴憵憶憸憹憺憻憼憽憿懀懁懃懄懅懆懇應懌懍懎懏懐懓懕懖懗懘懙懚懛懜懝懞懟懠懡懢懣懤懥懧懨懩懪懫懬懭懮懯懰懱懲懳懴懶懷懸懹懺懻懼懽懾戀戁戂戃戄戅戇戉戓戔戙戜戝戞戠戣戦戧戨戩戫戭戯戰戱戲戵戶戸戹戺戻戼扂扄扅扆扊�".split("");for(a=0;a!=t[145].length;++a)if(t[145][a].charCodeAt(0)!==65533){r[t[145][a]]=37120+a;e[37120+a]=t[145][a]}t[146]="����������������������������������������������������������������扏扐払扖扗扙扚扜扝扞扟扠扡扢扤扥扨扱扲扴扵扷扸扺扻扽抁抂抃抅抆抇抈抋抌抍抎抏抐抔抙抜抝択抣抦抧抩抪抭抮抯抰抲抳抴抶抷抸抺抾拀拁�拃拋拏拑拕拝拞拠拡拤拪拫拰拲拵拸拹拺拻挀挃挄挅挆挊挋挌挍挏挐挒挓挔挕挗挘挙挜挦挧挩挬挭挮挰挱挳挴挵挶挷挸挻挼挾挿捀捁捄捇捈捊捑捒捓捔捖捗捘捙捚捛捜捝捠捤捥捦捨捪捫捬捯捰捲捳捴捵捸捹捼捽捾捿掁掃掄掅掆掋掍掑掓掔掕掗掙掚掛掜掝掞掟採掤掦掫掯掱掲掵掶掹掻掽掿揀�".split("");for(a=0;a!=t[146].length;++a)if(t[146][a].charCodeAt(0)!==65533){r[t[146][a]]=37376+a;e[37376+a]=t[146][a]}t[147]="����������������������������������������������������������������揁揂揃揅揇揈揊揋揌揑揓揔揕揗揘揙揚換揜揝揟揢揤揥揦揧揨揫揬揮揯揰揱揳揵揷揹揺揻揼揾搃搄搆搇搈搉搊損搎搑搒搕搖搗搘搙搚搝搟搢搣搤�搥搧搨搩搫搮搯搰搱搲搳搵搶搷搸搹搻搼搾摀摂摃摉摋摌摍摎摏摐摑摓摕摖摗摙摚摛摜摝摟摠摡摢摣摤摥摦摨摪摫摬摮摯摰摱摲摳摴摵摶摷摻摼摽摾摿撀撁撃撆撈撉撊撋撌撍撎撏撐撓撔撗撘撚撛撜撝撟撠撡撢撣撥撦撧撨撪撫撯撱撲撳撴撶撹撻撽撾撿擁擃擄擆擇擈擉擊擋擌擏擑擓擔擕擖擙據�".split("");for(a=0;a!=t[147].length;++a)if(t[147][a].charCodeAt(0)!==65533){r[t[147][a]]=37632+a;e[37632+a]=t[147][a]}t[148]="����������������������������������������������������������������擛擜擝擟擠擡擣擥擧擨擩擪擫擬擭擮擯擰擱擲擳擴擵擶擷擸擹擺擻擼擽擾擿攁攂攃攄攅攆攇攈攊攋攌攍攎攏攐攑攓攔攕攖攗攙攚攛攜攝攞攟攠攡�攢攣攤攦攧攨攩攪攬攭攰攱攲攳攷攺攼攽敀敁敂敃敄敆敇敊敋敍敎敐敒敓敔敗敘敚敜敟敠敡敤敥敧敨敩敪敭敮敯敱敳敵敶數敹敺敻敼敽敾敿斀斁斂斃斄斅斆斈斉斊斍斎斏斒斔斕斖斘斚斝斞斠斢斣斦斨斪斬斮斱斲斳斴斵斶斷斸斺斻斾斿旀旂旇旈旉旊旍旐旑旓旔旕旘旙旚旛旜旝旞旟旡旣旤旪旫�".split("");for(a=0;a!=t[148].length;++a)if(t[148][a].charCodeAt(0)!==65533){r[t[148][a]]=37888+a;e[37888+a]=t[148][a]}t[149]="����������������������������������������������������������������旲旳旴旵旸旹旻旼旽旾旿昁昄昅昇昈昉昋昍昐昑昒昖昗昘昚昛昜昞昡昢昣昤昦昩昪昫昬昮昰昲昳昷昸昹昺昻昽昿晀時晄晅晆晇晈晉晊晍晎晐晑晘�晙晛晜晝晞晠晢晣晥晧晩晪晫晬晭晱晲晳晵晸晹晻晼晽晿暀暁暃暅暆暈暉暊暋暍暎暏暐暒暓暔暕暘暙暚暛暜暞暟暠暡暢暣暤暥暦暩暪暫暬暭暯暰暱暲暳暵暶暷暸暺暻暼暽暿曀曁曂曃曄曅曆曇曈曉曊曋曌曍曎曏曐曑曒曓曔曕曖曗曘曚曞曟曠曡曢曣曤曥曧曨曪曫曬曭曮曯曱曵曶書曺曻曽朁朂會�".split("");for(a=0;a!=t[149].length;++a)if(t[149][a].charCodeAt(0)!==65533){r[t[149][a]]=38144+a;e[38144+a]=t[149][a]}t[150]="����������������������������������������������������������������朄朅朆朇朌朎朏朑朒朓朖朘朙朚朜朞朠朡朢朣朤朥朧朩朮朰朲朳朶朷朸朹朻朼朾朿杁杄杅杇杊杋杍杒杔杕杗杘杙杚杛杝杢杣杤杦杧杫杬杮東杴杶�杸杹杺杻杽枀枂枃枅枆枈枊枌枍枎枏枑枒枓枔枖枙枛枟枠枡枤枦枩枬枮枱枲枴枹枺枻枼枽枾枿柀柂柅柆柇柈柉柊柋柌柍柎柕柖柗柛柟柡柣柤柦柧柨柪柫柭柮柲柵柶柷柸柹柺査柼柾栁栂栃栄栆栍栐栒栔栕栘栙栚栛栜栞栟栠栢栣栤栥栦栧栨栫栬栭栮栯栰栱栴栵栶栺栻栿桇桋桍桏桒桖桗桘桙桚桛�".split("");for(a=0;a!=t[150].length;++a)if(t[150][a].charCodeAt(0)!==65533){r[t[150][a]]=38400+a;e[38400+a]=t[150][a]}t[151]="����������������������������������������������������������������桜桝桞桟桪桬桭桮桯桰桱桲桳桵桸桹桺桻桼桽桾桿梀梂梄梇梈梉梊梋梌梍梎梐梑梒梔梕梖梘梙梚梛梜條梞梟梠梡梣梤梥梩梪梫梬梮梱梲梴梶梷梸�梹梺梻梼梽梾梿棁棃棄棅棆棇棈棊棌棎棏棐棑棓棔棖棗棙棛棜棝棞棟棡棢棤棥棦棧棨棩棪棫棬棭棯棲棳棴棶棷棸棻棽棾棿椀椂椃椄椆椇椈椉椊椌椏椑椓椔椕椖椗椘椙椚椛検椝椞椡椢椣椥椦椧椨椩椪椫椬椮椯椱椲椳椵椶椷椸椺椻椼椾楀楁楃楄楅楆楇楈楉楊楋楌楍楎楏楐楑楒楓楕楖楘楙楛楜楟�".split("");for(a=0;a!=t[151].length;++a)if(t[151][a].charCodeAt(0)!==65533){r[t[151][a]]=38656+a;e[38656+a]=t[151][a]}t[152]="����������������������������������������������������������������楡楢楤楥楧楨楩楪楬業楯楰楲楳楴極楶楺楻楽楾楿榁榃榅榊榋榌榎榏榐榑榒榓榖榗榙榚榝榞榟榠榡榢榣榤榥榦榩榪榬榮榯榰榲榳榵榶榸榹榺榼榽�榾榿槀槂槃槄槅槆槇槈槉構槍槏槑槒槓槕槖槗様槙槚槜槝槞槡槢槣槤槥槦槧槨槩槪槫槬槮槯槰槱槳槴槵槶槷槸槹槺槻槼槾樀樁樂樃樄樅樆樇樈樉樋樌樍樎樏樐樑樒樓樔樕樖標樚樛樜樝樞樠樢樣樤樥樦樧権樫樬樭樮樰樲樳樴樶樷樸樹樺樻樼樿橀橁橂橃橅橆橈橉橊橋橌橍橎橏橑橒橓橔橕橖橗橚�".split("");for(a=0;a!=t[152].length;++a)if(t[152][a].charCodeAt(0)!==65533){r[t[152][a]]=38912+a;e[38912+a]=t[152][a];
@@ -126,6 +149,7 @@ const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const num = v => (typeof v === "number" && isFinite(v)) ? v : (v === "" || v == null ? 0 : (isFinite(+v) ? +v : 0));
 const eur = v => "€ " + Math.round(num(v)).toLocaleString("en-US");
 const meur = v => { const n = num(v); return Math.abs(n) >= 1e6 ? "€ " + (n/1e6).toFixed(2) + "M" : Math.abs(n) >= 1e3 ? "€ " + (n/1e3).toFixed(1) + "K" : eur(n); };
+const ax = v => { const n = num(v); return Math.abs(n) >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1) + "M" : Math.abs(n) >= 1e3 ? Math.round(n/1e3) + "K" : String(Math.round(n)); };
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) + "%" : "0.0%";
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function toDate(v){ if (v instanceof Date) return v; if (typeof v === "number" && v > 20000 && v < 80000) return new Date(Math.round((v - 25569) * 864e5)); return null; }
@@ -137,11 +161,150 @@ function cell(v, cls){ const t = S(v); if (t === "n/a – not in EMEA") return `
   if (cls === "chk" && (t === "" || t === "(blank)" || t === "No project linked" || t === "(No STM)")) return `<td class="blank">${esc(t || "—")}</td>`;
   return `<td${cls && cls !== "chk" ? ` class="${cls}"` : ""}>${esc(t)}</td>`; }
 function table(heads, rows){ return `<div class="tblwrap"><table><thead><tr>${heads.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td colspan="${heads.length}" class="c">No rows</td></tr>`}</tbody></table></div>`; }
-function card(l, v, s, color){ return `<div class="card" style="border-left-color:${color}"><div class="l">${esc(l)}</div><div class="v" style="color:${color}">${v}</div><div class="s">${s}</div></div>`; }
+function card(l, v, s, color, act){ return `<div class="card${act ? " click" : ""}" style="border-left-color:${color}"${act ? ` data-act="${esc(act)}"` : ""}><div class="l">${esc(l)}</div><div class="v">${v}</div><div class="s">${s}</div></div>`; }
 function opts(list, sel){ return list.map(x => `<option${x === sel ? " selected" : ""}>${esc(x)}</option>`).join(""); }
 const COL = s => XLSX.utils.decode_col(s);
+const sumV = L => L.reduce((a, o) => a + o.val, 0);
+const sumBy = (rows, f) => rows.reduce((a, o) => a + (f(o) ? o.val : 0), 0);
+const uniqSorted = L => [...new Set(L.filter(x => x))].sort((a, b) => a.localeCompare(b));
 
-let D = null;   // parsed data
+// ------------------------------------------------------------------ categories (same rules as the workbook)
+const CL = "Closed", BI = "Billing", OC = "Open – confirmed", ON = "Open – not confirmed", EX = "Excluded (after period)";
+const CATS = [CL, BI, OC, ON, EX];
+const CC = {[CL]: "#2E8540", [BI]: "#3B6EA8", [OC]: "#8E2C5A", [ON]: "#C98A1B", [EX]: "#E31837"};
+const CSHORT = {[CL]: "Closed", [BI]: "Billing", [OC]: "Open confirmed", [ON]: "Open not confirmed", [EX]: "Excluded"};
+const isOpen = c => c === OC || c === ON;
+const LEVERS = ["Convert billing", "Near completion", "Recover missed", "Claim", "Confirm", "Pull in"];
+const NEAR_KW = ["delivery done", "acceptance", "to billing", "sent to billing", "invoice"];
+const RISK_KW = ["maybe", "pending", "not confirm", "need", "waiting", "tbc", "?", "unclear", "risk", "delay", "issue"];
+
+let D = null;   // parsed workbook
+const F = {half: "Auto", year: "Auto", tmode: "Auto – from data", tman: 0, dpm: "(All)", clus: "(All)", cust: "(All)", prod: "(All)", cat: "", month: ""};
+
+function period(){
+  const rep = D.meta.rep, half = F.half === "Auto" ? (rep.getUTCMonth() <= 5 ? "H1" : "H2") : F.half;
+  const y = F.year === "Auto" ? rep.getUTCFullYear() : +F.year;
+  const start = Date.UTC(y, half === "H1" ? 0 : 6, 1), end = Date.UTC(y, half === "H1" ? 5 : 11, half === "H1" ? 30 : 31);
+  return {half, y, start, end, label: half + " " + y};
+}
+function classify(P){
+  const unc = new Set(D.unc.map(u => u.order));
+  D.rows.forEach(o => {
+    const it = dnum(o.itdd), rt = dnum(o.rtdd), td = dnum(o.tdd);
+    let c;
+    if (o.upd === "Closed") c = CL;
+    else if ((it !== null && it > P.end) || (rt !== null && rt > P.end)) c = EX;
+    else if (o.upd === "Billing") c = BI;
+    else c = o.conf === "Yes" ? OC : ON;
+    o.cat = c;
+    const cm = o.comment.toLowerCase();
+    let lv = "";
+    if (c === BI) lv = "Convert billing";
+    else if (isOpen(c) && NEAR_KW.some(k => cm.includes(k))) lv = "Near completion";
+    else if (isOpen(c) && o.st === "Missed") lv = "Recover missed";
+    else if (isOpen(c) && o.team !== "Team" && unc.has(o.order)) lv = "Claim";
+    else if (c === ON && td !== null && td >= P.start && td <= P.end) lv = "Confirm";
+    else if (c === EX && it !== null && it <= P.end) lv = "Pull in";
+    o.lever = lv;
+    o.risk = cm !== "" && RISK_KW.some(k => cm.includes(k));
+    let fu = "";
+    if (isOpen(c)) {
+      if (!o.upd) fu += o.src === "All Orders only" ? "Not in EMEA tracker; " : "No status update; ";
+      if (o.conf === "Yes" && td !== null && td < dnum(D.meta.rep)) fu += "Confirmed but target date passed; ";
+      if (o.risk) fu += "Comment signals risk; ";
+      if (o.conf !== "Yes" && o.val >= D.meta.big) fu += "High value, not confirmed; ";
+    }
+    o.fu = fu;
+    // month bucket of the target date relative to the period
+    o.mb = td === null ? "No date" : td < P.start ? "Before" : td > P.end ? "After" : MON[new Date(td).getUTCMonth()];
+  });
+}
+
+// ------------------------------------------------------------------ tooltip
+const tip = $("#tip");
+document.addEventListener("mousemove", e => {
+  const t = e.target.closest && e.target.closest("[data-tip]");
+  if (!t) { tip.style.display = "none"; return; }
+  tip.innerHTML = t.getAttribute("data-tip"); tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+});
+
+// ------------------------------------------------------------------ sortable tables
+const SORT = {}, TBL = {};
+function stable(id, cols, items, limit){
+  TBL[id] = {cols, items, limit};
+  return `<div id="${id}">${stableHtml(id)}</div>`;
+}
+function stableHtml(id){
+  const {cols, items, limit} = TBL[id], st = SORT[id];
+  let L = items.slice();
+  if (st) { const k = cols[st.i].k; L.sort((a, b) => { const x = k(a), y = k(b); const r = (typeof x === "number" && typeof y === "number") ? x - y : String(x).localeCompare(String(y)); return st.d * r; }); }
+  const more = limit && L.length > limit ? `<div class="sub" style="padding:6px 8px">Showing ${limit} of ${L.length.toLocaleString()} rows — use the filters or sort to see others.</div>` : "";
+  if (limit) L = L.slice(0, limit);
+  const head = cols.map((c, i) => `<th${c.k ? ` class="s" data-sid="${id}" data-i="${i}" title="Sort"` : ""}>${esc(c.h)}${st && st.i === i ? `<span class="ar">${st.d > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+  const body = L.map((o, n) => `<tr>${cols.map(c => c.f(o, n)).join("")}</tr>`).join("") || `<tr><td colspan="${cols.length}" class="c">No rows</td></tr>`;
+  return `<div class="tblwrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${more}`;
+}
+document.addEventListener("click", e => {
+  const th = e.target.closest("th[data-sid]");
+  if (!th) return;
+  const id = th.dataset.sid, i = +th.dataset.i, st = SORT[id];
+  SORT[id] = st && st.i === i ? {i, d: -st.d} : {i, d: typeof TBL[id].cols[i].k(TBL[id].items[0] || {}) === "number" ? -1 : 1};
+  $("#" + id).innerHTML = stableHtml(id);
+});
+// common column builders
+const cIdx = {h: "#", f: (o, n) => `<td class="c">${n + 1}</td>`};
+const cTxt = (h, g, chk) => ({h, k: o => S(g(o)), f: o => cell(g(o), chk ? "chk" : "")});
+const cEur = (h, g) => ({h, k: o => num(g(o)), f: o => `<td class="num">${eur(g(o))}</td>`});
+const cDate = (h, g, bold) => ({h, k: o => dnum(g(o)) ?? 9e15, f: o => `<td class="c">${bold ? "<b>" : ""}${fd(g(o))}${bold ? "</b>" : ""}</td>`});
+const cCat = {h: "Category", k: o => CATS.indexOf(o.cat), f: o => `<td><span class="pill" style="background:${CC[o.cat]}22;color:${o.cat === ON ? "#7F5400" : CC[o.cat]}">${esc(CSHORT[o.cat])}</span></td>`};
+const cStat = {h: "Status", k: o => o.st, f: o => `<td class="c">${pill(o.st)}</td>`};
+const cConf = {h: "Confirmed", k: o => o.conf, f: o => `<td class="c">${o.conf === "Yes" ? (o.cat === EX ? '<span class="pill st-Missed">Yes ⚠</span>' : '<span class="pill st-On">Yes</span>') : '<span class="pill st-No">No</span>'}</td>`};
+
+// ------------------------------------------------------------------ charts (inline SVG, no libraries)
+function legend(cats){ return `<div class="legend">${cats.map(c => `<span data-cat="${esc(c)}" title="Click to filter"><i style="background:${CC[c]}"></i>${esc(CSHORT[c])}</span>`).join("")}</div>`; }
+// horizontal stacked bars: rows = [{label, key, segs: {cat: {v, n}}}]
+function hstack(rows, o){
+  const W = 720, LW = o.lw || 170, VW = 80, BH = 20, G = 9, top = 6;
+  const mx = Math.max(1, o.max || 0, ...rows.map(r => o.cats.reduce((a, c) => a + (r.segs[c] ? r.segs[c].v : 0), 0)));
+  const sc = (W - LW - VW - 10) / mx, H = top + rows.length * (BH + G) + 4;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria)}">`;
+  rows.forEach((r, i) => {
+    const y = top + i * (BH + G); let x = LW, tot = 0, cnt = 0;
+    const lab = r.label.length > 24 ? r.label.slice(0, 23) + "…" : r.label;
+    s += `<g class="${o.click ? "hit" : ""}" data-key="${esc(r.key)}" data-dim="${o.dim || ""}">`;
+    s += `<rect x="0" y="${y - 3}" width="${W}" height="${BH + 6}" fill="transparent"/>`;
+    s += `<text x="${LW - 8}" y="${y + 14}" text-anchor="end" font-size="12" ${r.sel ? 'font-weight="bold"' : ""}>${esc(lab)}</text>`;
+    o.cats.forEach(c => { const sg = r.segs[c]; if (!sg || sg.v <= 0) return; const w = sg.v * sc; tot += sg.v; cnt += sg.n;
+      s += `<rect class="m${r.sel ? " sel" : ""}" x="${x.toFixed(1)}" y="${y}" width="${Math.max(1, w - 2).toFixed(1)}" height="${BH}" rx="3" fill="${CC[c]}" data-tip="<b>${esc(r.label)}</b><br>${esc(CSHORT[c])}: ${eur(sg.v)} · ${sg.n} orders"/>`; x += w; });
+    s += `<text x="${(x + 6).toFixed(1)}" y="${y + 14}" font-size="12" class="ax">${meur(tot)}</text></g>`;
+  });
+  if (o.target) { const tx = LW + o.target * sc; s += `<line x1="${tx}" x2="${tx}" y1="0" y2="${H}" stroke="#29251D" stroke-width="2" stroke-dasharray="4 3"/><text x="${tx - 4}" y="${H - 4}" text-anchor="end" font-size="11" class="ax">target ${meur(o.target)}</text>`; }
+  return s + "</svg>";
+}
+// vertical stacked columns: cols = [{label, key, segs}]
+function vstack(cols, o){
+  const W = 720, H = 280, L = 46, B = 30, T = 14, R = 8;
+  const mx = Math.max(1, ...cols.map(c => o.cats.reduce((a, k) => a + (c.segs[k] ? c.segs[k].v : 0), 0)));
+  const step = Math.pow(10, Math.floor(Math.log10(mx))), nice = Math.ceil(mx / step) * step, ph = H - B - T, sc = ph / nice;
+  const cw = (W - L - R) / cols.length, bw = Math.min(56, cw * 0.62);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria)}">`;
+  for (let i = 0; i <= 4; i++) { const v = nice * i / 4, y = H - B - v * sc; s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="ax" x="${L - 6}" y="${y + 4}" text-anchor="end">${ax(v)}</text>`; }
+  cols.forEach((c, i) => {
+    const x = L + i * cw + (cw - bw) / 2; let y = H - B, tot = 0, n = 0;
+    s += `<g class="hit" data-key="${esc(c.key)}" data-dim="month"><rect x="${L + i * cw}" y="${T}" width="${cw}" height="${ph}" fill="transparent"/>`;
+    o.cats.forEach(k => { const sg = c.segs[k]; if (!sg || sg.v <= 0) return; const h = sg.v * sc; y -= h; tot += sg.v; n += sg.n;
+      s += `<rect class="m${c.sel ? " sel" : ""}" x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${Math.max(1, h - 2).toFixed(1)}" rx="3" fill="${CC[k]}" data-tip="<b>${esc(c.title || c.label)}</b><br>${esc(CSHORT[k])}: ${eur(sg.v)} · ${sg.n} orders"/>`; });
+    if (tot) s += `<text x="${x + bw / 2}" y="${y - 5}" text-anchor="middle" font-size="11" class="ax">${ax(tot)}</text>`;
+    s += `<text x="${x + bw / 2}" y="${H - B + 16}" text-anchor="middle" font-size="12" ${c.sel ? 'font-weight="bold"' : ""}>${esc(c.label)}</text></g>`;
+  });
+  return s + `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="#BFB8AA"/></svg>`;
+}
+function group(L, keyF){ const m = new Map(); L.forEach(o => { const k = keyF(o); if (!m.has(k)) m.set(k, {key: k, label: k, segs: {}, n: 0, v: 0}); const g = m.get(k); g.n++; g.v += o.val; const s = g.segs[o.cat] = g.segs[o.cat] || {v: 0, n: 0}; s.v += o.val; s.n++; }); return [...m.values()]; }
+const elig = g => CATS.slice(0, 4).reduce((a, c) => a + (g.segs[c] ? g.segs[c].v : 0), 0);
 
 // ------------------------------------------------------------------ load
 const fileIn = $("#file");
@@ -151,7 +314,7 @@ const drop = $("#load");
 drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
 drop.ondragleave = () => drop.classList.remove("over");
 drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && load(e.dataTransfer.files[0]); };
-$("#closeBtn").onclick = () => { D = null; document.querySelectorAll(".view").forEach(v => { v.innerHTML = ""; v.classList.add("hidden"); }); $("#nav").classList.add("hidden"); drop.classList.remove("hidden"); $("#status").innerHTML = ""; fileIn.value = ""; $("#meta").innerHTML = "Web Viewer v0.1"; };
+$("#closeBtn").onclick = () => { D = null; document.querySelectorAll(".view").forEach(v => { v.innerHTML = ""; v.classList.add("hidden"); }); $("#nav").classList.add("hidden"); drop.classList.remove("hidden"); $("#status").innerHTML = ""; fileIn.value = ""; $("#meta").innerHTML = "Web Viewer v0.2"; $("#title").textContent = "EMEA Delivery — Revenue Viewer"; };
 
 function load(f){
   $("#status").innerHTML = `<p class="sub">Reading ${esc(f.name)}…</p>`;
@@ -161,6 +324,8 @@ function load(f){
       const wb = XLSX.read(new Uint8Array(ev.target.result), {type: "array", cellDates: false,
         sheets: ["Calc", "Management", "Dashboard", "Unclaimed Orders", "RTDD Summary", "Team Summary"]});
       D = parse(wb, f.name);
+      Object.assign(F, {half: "Auto", year: "Auto", dpm: "(All)", clus: "(All)", cust: "(All)", prod: "(All)", cat: "", month: ""});
+      F.tmode = D.meta.tmode === "Manual" ? "Manual" : "Auto – from data"; F.tman = Math.round(D.meta.tman || D.meta.target || 0);
       drop.classList.add("hidden"); $("#nav").classList.remove("hidden");
       show("mgmt");
     } catch (err) {
@@ -170,113 +335,212 @@ function load(f){
   rd.readAsArrayBuffer(f);
 }
 
-function grid(ws){ return ws ? XLSX.utils.sheet_to_json(ws, {header: 1, raw: true, defval: ""}) : []; }
-function cellv(ws, a){ const c = ws && ws[a]; return c ? (c.v instanceof Date ? c.v : c.v) : ""; }
+function grid(ws){   // always read from A1 so column letters and row numbers match Excel, whatever the sheet's used range
+  if (!ws || !ws["!ref"]) return [];
+  const r = XLSX.utils.decode_range(ws["!ref"]); r.s.r = 0; r.s.c = 0;
+  return XLSX.utils.sheet_to_json(ws, {header: 1, raw: true, defval: "", range: r, blankrows: true});
+}
+function cellv(ws, a){ const c = ws && ws[a]; return c ? c.v : ""; }
 
 function parse(wb, fname){
   const calc = wb.Sheets["Calc"], mg = wb.Sheets["Management"];
   if (!calc || !mg) throw new Error("tabs 'Calc' / 'Management' not found");
   const g = grid(calc);
   const k = {A:"A",val:"B",itdd:"C",rtdd:"D",tdd:"E",days:"F",st:"G",age:"I",dpmIdx:"K",person:"L",team:"M",cust:"N",clus:"O",prod:"P",proj:"Q",
-             based:"AF",doo:"AH",dooIdx:"CI",order:"CR",src:"CS",ostat:"CT",conf:"DN",comment:"DO",upd:"DP",week:"DQ",cat:"DS",dooD:"DW",lever:"EQ"};
+             based:"AF",doo:"AH",dooIdx:"CI",order:"CR",src:"CS",ostat:"CT",conf:"DN",comment:"DO",upd:"DP",week:"DQ",dooD:"DW"};
   const ix = {}; for (const [n, c] of Object.entries(k)) ix[n] = COL(c);
   const rows = [];
   for (let r = 1; r < g.length; r++) {
     const R = g[r]; if (!R || num(R[ix.A]) !== 1) continue;
     const o = {}; for (const n in ix) o[n] = R[ix[n]];
-    o.val = num(o.val); o.order = S(o.order); o.cust = S(o.cust); o.proj = S(o.proj); o.person = S(o.person); o.cat = S(o.cat);
-    o.st = S(o.st); o.doo = S(o.doo); o.dooD = S(o.dooD); o.lever = S(o.lever); o.team = S(o.team);
+    o.val = num(o.val);
+    for (const n of ["order","cust","proj","person","st","doo","dooD","team","clus","prod","upd","conf","comment","src","based","ostat"]) o[n] = S(o[n]);
+    if (!o.clus) o.clus = "(blank)";
     rows.push(o);
   }
   if (!rows.length) throw new Error("no orders found in the Calc tab — was the workbook saved after recalculation?");
-  const ins = []; for (let r = 17; r <= 32; r++) { const t = S(cellv(mg, "B" + r)); if (t.startsWith("▶")) ins.push(t.replace(/^▶\s*/, "")); }
-  // RTDD history
   const hist = {}; grid(wb.Sheets["RTDD Summary"]).slice(1).forEach(R => { if (S(R[0])) hist[S(R[0])] = {n: num(R[1]), t: S(R[2])}; });
-  // team (sorted as in Team Summary)
   const team = []; grid(wb.Sheets["Team Summary"]).slice(5).forEach(R => { if (S(R[3])) team.push({idx: num(R[0]), name: S(R[3]), cluster: S(R[1]), mgr: S(R[2])}); });
-  // unclaimed list
   const unc = []; grid(wb.Sheets["Unclaimed Orders"]).slice(11).forEach(R => { if (S(R[4])) unc.push({link: S(R[2]), src: S(R[3]), order: S(R[4]), cust: S(R[5]), proj: S(R[6]), stm: S(R[7]), doo: S(R[8]), val: num(R[9]), tdd: R[10], ostat: S(R[11]), dpm: S(R[12]), others: S(R[13]), mgr: S(R[14])}); });
-  const rep = toDate(cellv(wb.Sheets["Dashboard"], "Q3")) || new Date();
-  const meta = {file: fname, rep, start: toDate(cellv(mg, "C5")), end: toDate(cellv(mg, "E5")), target: num(cellv(mg, "H5")), week: S(cellv(mg, "P5")), ver: S(cellv(mg, "B2")).split("·").pop().trim()};
+  const rep = toDate(cellv(wb.Sheets["Dashboard"], "Q3")) || new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
+  const v195 = S(cellv(mg, "H4")) !== "";
+  const meta = {file: fname, rep, target: num(cellv(mg, "H5")), big: num(cellv(mg, "K5")) || 250000, week: S(cellv(mg, "P5")),
+    tmode: v195 ? S(cellv(mg, "H4")) : "Manual", tman: v195 ? num(cellv(mg, "K4")) : num(cellv(mg, "H5")),
+    ver: S(cellv(mg, "B2")).split("·").pop().trim()};
   $("#meta").innerHTML = `${esc(fname)}<br>Report date ${fd(rep)} · ${esc(meta.week)} · workbook ${esc(meta.ver)} · ${rows.length.toLocaleString()} orders`;
-  return {rows, ins, hist, team, unc, meta, total: rows.reduce((a, o) => a + o.val, 0)};
+  return {rows, hist, team, unc, meta, total: rows.reduce((a, o) => a + o.val, 0)};
 }
 
 // ------------------------------------------------------------------ navigation
+let CUR = "mgmt";
 document.querySelectorAll("#nav button[data-v]").forEach(b => b.onclick = () => show(b.dataset.v));
 function show(v){
+  CUR = v;
+  classify(period());
   document.querySelectorAll("#nav button[data-v]").forEach(b => b.classList.toggle("active", b.dataset.v === v));
   document.querySelectorAll(".view").forEach(s => s.classList.add("hidden"));
   const el = $("#v-" + v); el.classList.remove("hidden");
   ({mgmt: viewMgmt, cust: viewCust, person: viewPerson, unc: viewUnc, orders: viewOrders})[v](el);
 }
-const sumBy = (rows, f) => rows.reduce((a, o) => a + (f(o) ? o.val : 0), 0);
 
-// ------------------------------------------------------------------ Management
+// ------------------------------------------------------------------ Management (fully recalculated in the browser)
 function viewMgmt(el){
-  const R = D.rows, T = D.meta.target;
-  const closed = sumBy(R, o => o.cat === "Closed"), bill = sumBy(R, o => o.cat === "Billing"),
-        oc = sumBy(R, o => o.cat === "Open – confirmed"), on = sumBy(R, o => o.cat === "Open – not confirmed"), ex = sumBy(R, o => o.cat.startsWith("Excluded"));
+  const P = period(); classify(P);
+  $("#title").textContent = `EMEA Delivery — ${P.label} Revenue Viewer`;
+  const ALL = D.rows;
+  const base = ALL.filter(o => (F.dpm === "(All)" || o.person === F.dpm) && (F.clus === "(All)" || o.clus === F.clus) && (F.cust === "(All)" || o.cust === F.cust) && (F.prod === "(All)" || o.prod === F.prod));
+  const R = base;                                       // KPIs ignore the chart drill (category / month)
+  const drill = base.filter(o => (!F.cat || o.cat === F.cat) && (!F.month || o.mb === F.month));
+  const v = c => sumBy(R, o => o.cat === c), n = c => R.filter(o => o.cat === c).length;
+  const closed = v(CL), bill = v(BI), oc = v(OC), on = v(ON), ex = v(EX);
+  const auto = closed + bill + oc + on;
+  const manual = F.tmode === "Manual", T = manual ? F.tman : auto;
   const fc = closed + bill + oc, gap = Math.max(0, T - closed - bill);
-  const open = R.filter(o => o.cat.startsWith("Open")).sort((a, b) => b.val - a.val);
+  const filtered = F.dpm !== "(All)" || F.clus !== "(All)" || F.cust !== "(All)" || F.prod !== "(All)";
+  const open = R.filter(o => isOpen(o.cat)).sort((a, b) => b.val - a.val);
   let cum = 0, needed = 0; open.forEach(o => { o._before = cum; cum += o.val; o._cum = cum; if (o._before < gap) needed++; });
-  const cnt = c => R.filter(o => o.cat === c).length;
-  const cats = [["Closed", closed, "#2E7D32"], ["Billing", bill, "#4D4D4F"], ["Open – confirmed", oc, "#5F0229"], ["Open – not confirmed", on, "#B7791F"], ["Excluded (2027+)", ex, "#E31837"]];
-  const mx = Math.max(T, ...cats.map(c => c[1]), 1);
-  const levers = ["Convert billing", "Near completion", "Recover missed", "Claim", "Confirm", "Pull in"];
-  const acts = {"Convert billing": "Chase billing / acceptance before month-end", "Near completion": "Push customer sign-off and billing", "Recover missed": "New dated plan this week",
-                "Claim": "Assign to the suggested DPM", "Confirm": "Owner to confirm Yes / No for H2", "Pull in": "Review whether RTDD can move back into 2026"};
-  const ups = R.filter(o => o.lever).sort((a, b) => b.val - a.val);
-  const excl = R.filter(o => o.cat.startsWith("Excluded")).sort((a, b) => b.val - a.val);
-  // by DPM
-  const byP = {}; R.forEach(o => { const p = o.person || "(No STM)"; (byP[p] = byP[p] || {n: 0, closed: 0, bill: 0, oc: 0, on: 0, ex: 0, team: o.team}); const b = byP[p]; b.n++;
-    if (o.cat === "Closed") b.closed += o.val; else if (o.cat === "Billing") b.bill += o.val; else if (o.cat === "Open – confirmed") b.oc += o.val; else if (o.cat === "Open – not confirmed") b.on += o.val; else if (o.cat.startsWith("Excluded")) b.ex += o.val; });
-  const dpmRows = Object.entries(byP).filter(([p, b]) => b.team === "Team" || p === "(No STM)").sort((a, b) => (b[1].closed + b[1].bill + b[1].oc + b[1].on) - (a[1].closed + a[1].bill + a[1].oc + a[1].on));
+  const top5 = open.slice(0, 5).reduce((a, o) => a + o.val, 0);
+  const ups = R.filter(o => o.lever);
+  const lv = l => sumBy(ups, o => o.lever === l);
+  const exPull = sumBy(R, o => o.cat === EX && o.lever === "Pull in");
+  const noUpd = R.filter(o => o.cat !== CL && !o.upd && o.src !== "All Orders only").length;
+  const fus = R.filter(o => o.fu);
+  const yrs = [P.y - 1, P.y, P.y + 1, P.y + 2].map(String); const repY = D.meta.rep.getUTCFullYear();
+  const yrOpts = ["Auto", ...[...new Set([repY - 1, repY, repY + 1, repY + 2].map(String))]];
+  const dpms = uniqSorted(ALL.filter(o => o.team === "Team").map(o => o.person));
+  const ins = [
+    `Target status: achieved ${pct(closed, T)} (${eur(closed)}); with billing ${pct(closed + bill, T)}; forecast incl. confirmed open ${pct(fc, T)}` + (fc >= T ? " — target is covered if confirmed orders land." : ` — still ${eur(T - fc)} short even if every confirmed order lands.`),
+    gap === 0 ? "Gap: closed + billing already cover the target. Focus on billing conversion and protecting confirmed orders." : `Gap ${eur(gap)}: the ${needed} largest open orders (Pareto below) would close it. RECOMMEND: weekly review of these orders only with their STM / DOO.`,
+    open.length ? `Concentration: the top 5 open orders are worth ${eur(top5)} (${gap ? Math.round(100 * top5 / gap) : 0}% of the gap). ` + (gap && top5 / gap > 0.5 ? "High dependency — escalate these early and prepare fallback orders." : "Risk is spread — push volume across owners.") : "",
+    on === 0 ? "All open orders are confirmed." : `Unconfirmed: ${eur(on)} across ${n(ON)} open orders has no confirmation for ${P.label}. RECOMMEND: owners confirm Yes / No by next week so the forecast is reliable.`,
+    ex === 0 ? "No orders slipped beyond the period end date." : `Excluded: ${eur(ex)} (${n(EX)} orders) has iTDD or RTDD after ${fd(P.end / 864e5 + 25569)} and is removed from ${P.label}. ${eur(exPull)} of it was originally planned inside the period — RECOMMEND a pull-in review for those.`,
+    bill === 0 ? "Nothing in billing." : `Billing: ${eur(bill)} is in billing. RECOMMEND: chase billing / customer acceptance so it converts to Closed before month-end.`,
+    noUpd === 0 ? "Every non-closed order has a status update." : `Data hygiene: ${noUpd} EMEA orders have no Status update. RECOMMEND: ask DOO / STM to update Status, Confirmed for H2 and Comment weekly.`,
+    ups.length ? `${P.label} Upside: ${eur(sumV(ups))} across ${ups.length} orders — convert billing ${eur(lv("Convert billing"))}, recover missed ${eur(lv("Recover missed"))}, pull-in ${eur(lv("Pull in"))}.` : "Upside: no extra levers found.",
+    open[0] ? `Biggest single lever: ${open[0].order} for ${open[0].cust} (${eur(open[0].val)}, STM ${open[0].person}, ${open[0].conf === "Yes" ? "confirmed" : "NOT confirmed"}). RECOMMEND: owner to share a dated closure plan.` : "",
+  ].filter(x => x);
+
+  // chart data
+  const months = (P.half === "H1" ? [0,1,2,3,4,5] : [6,7,8,9,10,11]).map(m => MON[m]);
+  const mKeys = ["Before", ...months, "After", "No date"];
+  const mg = group(R, o => o.mb), mMap = Object.fromEntries(mg.map(g => [g.key, g]));
+  const mCols = mKeys.map(k => ({key: k, label: k === "Before" ? "Earlier" : k === "After" ? "Later" : k, title: k === "Before" ? "Target date before " + P.label : k === "After" ? "Target date after " + P.label : k === "No date" ? "No target date" : k + " " + P.y, segs: (mMap[k] || {segs: {}}).segs, sel: F.month === k})).filter(c => Object.keys(c.segs).length || months.includes(c.key));
+  const dRows = group(R.filter(o => o.team === "Team" || o.person === "(No STM)"), o => o.person).sort((a, b) => elig(b) - elig(a)).map(g => ({...g, sel: F.dpm === g.key}));
+  const cRows = group(R, o => o.clus).sort((a, b) => elig(b) - elig(a)).slice(0, 12).map(g => ({...g, sel: F.clus === g.key}));
+  const kRows = group(R, o => o.cust).sort((a, b) => elig(b) - elig(a)).slice(0, 12).map(g => ({...g, sel: F.cust === g.key}));
+  const bridge = [{key: "all", label: P.label + " revenue", segs: Object.fromEntries(CATS.slice(0, 4).map(c => [c, {v: v(c), n: n(c)}]))},
+                  {key: EX, label: "Excluded (after period)", segs: {[EX]: {v: ex, n: n(EX)}}}];
+
+  const chips = [];
+  if (F.dpm !== "(All)") chips.push(["dpm", "DPM: " + F.dpm]); if (F.clus !== "(All)") chips.push(["clus", "Cluster: " + F.clus]);
+  if (F.cust !== "(All)") chips.push(["cust", "Customer: " + F.cust]); if (F.prod !== "(All)") chips.push(["prod", "Product: " + F.prod]);
+  if (F.cat) chips.push(["cat", "Category: " + CSHORT[F.cat]]); if (F.month) chips.push(["month", "Target month: " + (mCols.find(c => c.key === F.month) || {title: F.month}).title]);
+
   el.innerHTML = `
+  <div class="fbar">
+    <div class="controls">
+      <div><label>Period</label><select id="fHalf">${opts(["Auto", "H1", "H2"], F.half)}</select></div>
+      <div><label>Year</label><select id="fYear">${opts(yrOpts, F.year)}</select></div>
+      <div><label>Target</label><select id="fTm">${opts(["Auto – from data", "Manual"], F.tmode)}</select></div>
+      <div${manual ? "" : ' class="hidden"'}><label>Manual target (€)</label><input type="number" id="fTv" step="100000" min="0" value="${F.tman}"></div>
+      <div><label>DPM (STM)</label><select id="fDpm">${opts(["(All)", ...dpms, "(No STM)"], F.dpm)}</select></div>
+      <div><label>Sales cluster</label><select id="fClus">${opts(["(All)", ...uniqSorted(ALL.map(o => o.clus))], F.clus)}</select></div>
+      <div><label>Customer</label><select id="fCust">${opts(["(All)", ...uniqSorted(ALL.map(o => o.cust))], F.cust)}</select></div>
+      <div><label>Product</label><select id="fProd">${opts(["(All)", ...uniqSorted(ALL.map(o => o.prod))], F.prod)}</select></div>
+    </div>
+    <div class="chips"><b>${esc(P.label)}</b>&nbsp;${fd(P.start / 864e5 + 25569)} – ${fd(P.end / 864e5 + 25569)} ${F.half === "Auto" || F.year === "Auto" ? `<span class="sub" style="margin:0">(auto from report date ${fd(D.meta.rep)})</span>` : ""}
+      ${chips.map(([k, t]) => `<span class="chip" data-clear="${k}">${esc(t)} ✕</span>`).join("")}${chips.length > 1 ? '<span class="chip" data-clear="all">Clear all ✕</span>' : ""}</div>
+    ${manual && filtered ? '<div class="warn">Manual target is for the whole team while filters are on — switch Target to "Auto – from data" to compare each DPM / cluster / customer against its own expected revenue.</div>' : ""}
+  </div>
   <div class="cards">
-    ${card("H2 target", meur(T), fd(D.meta.start) + " – " + fd(D.meta.end), "#29251D")}
-    ${card("Achieved (closed)", meur(closed), pct(closed, T) + " of target · " + cnt("Closed") + " orders", "#2E7D32")}
-    ${card("In billing", meur(bill), pct(bill, T) + " of target · " + cnt("Billing") + " orders", "#4D4D4F")}
+    ${card(P.label + " target" + (manual ? " (manual)" : " (from data)"), meur(T), manual ? "typed target" : "all revenue expected in " + P.label + " (closed + billing + open)", "#29251D")}
+    ${card("Achieved (closed)", meur(closed), pct(closed, T) + " of target · " + n(CL) + " orders", CC[CL], CL)}
+    ${card("In billing", meur(bill), pct(bill, T) + " of target · " + n(BI) + " orders", CC[BI], BI)}
     ${card("Forecast", meur(fc), pct(fc, T) + " of target · " + (fc >= T ? "on track ✓" : "short " + eur(T - fc)), "#0A0838")}
     ${card("Gap after closed + billing", meur(gap), gap ? needed + " largest open orders close it" : "target covered ✓", "#E31837")}
-    ${card("Open – confirmed", meur(oc), cnt("Open – confirmed") + " orders", "#5F0229")}
-    ${card("Open – not confirmed", meur(on), cnt("Open – not confirmed") + " orders need a decision", "#B7791F")}
-    ${card("Excluded (2027+)", meur(ex), cnt("Excluded (2027+)") + " orders won't land in 2026", "#E31837")}
+    ${card("Open – confirmed", meur(oc), n(OC) + " orders", CC[OC], OC)}
+    ${card("Open – not confirmed", meur(on), n(ON) + " orders need a decision", CC[ON], ON)}
+    ${card("Excluded (after period)", meur(ex), n(EX) + " orders won't land by " + fd(P.end / 864e5 + 25569), CC[EX], EX)}
   </div>
-  <h2 class="dark">💡 Insights & recommendations</h2>
-  <div class="ins">${D.ins.map(t => `<div>▶ ${esc(t)}</div>`).join("") || "<div>No insights in this file.</div>"}</div>
-  <h2>H2 revenue bridge vs target</h2>
-  <div class="bars">${cats.map(c => `<div class="row"><div>${esc(c[0])}</div><div class="track"><div class="fill" style="width:${(100 * c[1] / mx).toFixed(1)}%;background:${c[2]}"></div><div class="tgt" style="left:${(100 * T / mx).toFixed(1)}%"></div></div><div class="num">${eur(c[1])}</div></div>`).join("")}
-    <div class="sub">Black line = H2 target (${eur(T)})</div></div>
+  <div class="sub">Tip: click a card, a bar or a legend item to drill into the orders behind it. Click a DPM / cluster / customer bar to filter the whole page.</div>
+  <h2 class="dark">💡 Insights & recommendations — ${esc(P.label)}${filtered ? " (filtered)" : ""}</h2>
+  <div class="ins">${ins.map(t => `<div>▶ ${esc(t)}</div>`).join("")}</div>
+
+  <div class="grid2" style="margin-top:16px">
+    <div class="panel"><h3>Progress to target</h3><div class="sub">Stacked by status; dashed line = target</div>${legend(CATS)}
+      ${hstack(bridge, {cats: CATS, target: T, max: T, lw: 170, aria: "Revenue by status vs target", dim: "bridge"})}</div>
+    <div class="panel"><h3>Revenue by target month</h3><div class="sub">Target date (RTDD, else iTDD). Click a month to see its orders.</div>${legend(CATS)}
+      ${vstack(mCols, {cats: CATS, aria: "Revenue by target month"})}</div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="panel"><h3>By DPM (STM)</h3><div class="sub">Team DPMs, largest expected revenue first. Click to filter.</div>${legend(CATS)}
+      ${hstack(dRows, {cats: CATS, aria: "Revenue by DPM", click: true, dim: "dpm"})}</div>
+    <div>
+      <div class="panel"><h3>By sales cluster (top 12)</h3><div class="sub">Click to filter.</div>${legend(CATS)}
+        ${hstack(cRows, {cats: CATS, aria: "Revenue by cluster", click: true, dim: "clus"})}</div>
+      <div class="panel" style="margin-top:16px"><h3>By customer (top 12)</h3><div class="sub">Click to filter.</div>${legend(CATS)}
+        ${hstack(kRows, {cats: CATS, aria: "Revenue by customer", click: true, dim: "cust"})}</div>
+    </div>
+  </div>
+
+  <h2>Orders in view${F.cat || F.month ? " — drill-down" : ""}</h2>
+  <div class="controls"><div class="sub">${drill.length.toLocaleString()} orders · ${eur(sumV(drill))}. Click any column header to sort.</div></div>
+  ${stable("tDrill", [cIdx, cTxt("Order", o => o.order), cTxt("Customer", o => o.cust, 1), cTxt("Project", o => o.proj, 1), cTxt("STM (DPM)", o => o.person, 1), cTxt("DOO", o => o.dooD, 1),
+      cTxt("Cluster", o => o.clus, 1), cEur("Value", o => o.val), cDate("iTDD", o => o.itdd), cDate("RTDD", o => o.rtdd), cDate("Target date", o => o.tdd, 1), cStat, cCat, cConf, cTxt("Upd. status", o => o.upd), cTxt("Comment", o => o.comment)],
+      drill.slice().sort((a, b) => b.val - a.val), 300)}
+
   <h2>Pareto — top open orders to close the gap</h2>
-  <div class="sub">H2-eligible open orders, largest first. "Needed" = within the set that closes the gap of ${eur(gap)}.</div>
-  ${table(["#", "Order", "Customer", "Project", "STM (DPM)", "DOO", "Confirmed", "Target date", "Value", "Cumulative", "% of gap", "Needed?", "Comment"],
-    open.slice(0, 40).map((o, i) => `<tr><td class="c">${i + 1}</td>${cell(o.order)}${cell(o.cust, "chk")}${cell(o.proj, "chk")}${cell(o.person, "chk")}${cell(o.dooD, "chk")}
-      <td class="c">${o.conf === "Yes" ? '<span class="pill st-On">Yes</span>' : '<span class="pill st-Due">No</span>'}</td><td class="c">${fd(o.tdd)}</td>
-      <td class="num">${eur(o.val)}</td><td class="num">${eur(o._cum)}</td><td class="num">${gap ? Math.round(100 * o._cum / gap) + "%" : ""}</td>
-      <td class="c">${o._before < gap ? '<span class="need">✓ Needed</span>' : ""}</td>${cell(o.comment)}</tr>`))}
-  <h2>H2 upside — orders that can still add revenue</h2>
-  ${table(["Lever", "Orders", "Value", "% of gap", "Action"], levers.map(l => { const L = ups.filter(o => o.lever === l), v = L.reduce((a, o) => a + o.val, 0);
-      return `<tr><td><b style="color:#E31837">${esc(l)}</b></td><td class="c">${L.length}</td><td class="num">${eur(v)}</td><td class="num">${gap ? Math.round(100 * v / gap) + "%" : ""}</td><td>${esc(acts[l])}</td></tr>`; }))}
+  <div class="sub">Open orders inside the period, largest first. "Needed" = within the set that closes the gap of ${eur(gap)}.</div>
+  ${stable("tPar", [cIdx, cTxt("Order", o => o.order), cTxt("Customer", o => o.cust, 1), cTxt("Project", o => o.proj, 1), cTxt("STM (DPM)", o => o.person, 1), cTxt("DOO", o => o.dooD, 1), cConf,
+      cDate("Target date", o => o.tdd), cEur("Value", o => o.val), cEur("Cumulative", o => o._cum), {h: "% of gap", k: o => o._cum, f: o => `<td class="num">${gap ? Math.round(100 * o._cum / gap) + "%" : ""}</td>`},
+      {h: "Needed?", k: o => o._before < gap ? 0 : 1, f: o => `<td class="c">${o._before < gap ? '<span class="need">✓ Needed</span>' : ""}</td>`}, cTxt("Comment", o => o.comment)], open, 60)}
+
+  <h2>${esc(P.label)} upside — orders that can still add revenue</h2>
+  ${table(["Lever", "Orders", "Value", "% of gap", "Action"], LEVERS.map(l => { const L = ups.filter(o => o.lever === l), vv = sumV(L);
+      return `<tr><td><b style="color:#E31837">${esc(l)}</b></td><td class="c">${L.length}</td><td class="num">${eur(vv)}</td><td class="num">${gap ? Math.round(100 * vv / gap) + "%" : ""}</td><td>${esc(ACTS[l])}</td></tr>`; }))}
   <div style="height:10px"></div>
-  ${table(["#", "Lever", "Order", "Customer", "Project", "STM (DPM)", "DOO", "Value", "Target date", "Status", "Confirmed", "Next action"],
-    ups.slice(0, 40).map((o, i) => `<tr><td class="c">${i + 1}</td><td><b style="color:#E31837">${esc(o.lever)}</b></td>${cell(o.order)}${cell(o.cust, "chk")}${cell(o.proj, "chk")}${cell(o.person, "chk")}${cell(o.dooD, "chk")}
-      <td class="num">${eur(o.val)}</td><td class="c">${fd(o.tdd)}</td>${cell(o.upd, "c")}${cell(o.conf, "c")}<td>${esc(acts[o.lever])}</td></tr>`))}
-  <h2>Will not land in 2026 — iTDD or RTDD after ${fd(D.meta.end)}</h2>
-  ${table(["#", "Order", "Customer", "Project", "STM (DPM)", "DOO", "iTDD", "RTDD", "Slipped from 2026?", "Value", "Confirmed"],
-    excl.slice(0, 40).map((o, i) => { const sl = dnum(o.itdd) !== null && dnum(o.itdd) <= dnum(D.meta.end); return `<tr><td class="c">${i + 1}</td>${cell(o.order)}${cell(o.cust, "chk")}${cell(o.proj, "chk")}${cell(o.person, "chk")}${cell(o.dooD, "chk")}
-      <td class="c">${fd(o.itdd)}</td><td class="c">${fd(o.rtdd)}</td><td class="c">${sl ? '<span class="pill st-Due">Yes — iTDD in 2026</span>' : "No"}</td><td class="num">${eur(o.val)}</td>
-      <td class="c">${o.conf === "Yes" ? '<span class="pill st-Missed">Yes ⚠</span>' : ""}</td></tr>`; }))}
-  <h2>H2 progress by DPM (STM)</h2>
-  ${table(["DPM", "Orders", "H2 eligible", "Closed", "Billing", "Open confirmed", "Open not confirmed", "Excluded 2027+", "Achieved %"],
-    dpmRows.map(([p, b]) => { const el2 = b.closed + b.bill + b.oc + b.on; return `<tr>${cell(p, "chk")}<td class="c">${b.n}</td><td class="num">${eur(el2)}</td><td class="num">${eur(b.closed)}</td><td class="num">${eur(b.bill)}</td>
-      <td class="num">${eur(b.oc)}</td><td class="num">${eur(b.on)}</td><td class="num">${eur(b.ex)}</td><td class="num">${pct(b.closed, el2)}</td></tr>`; }))}`;
+  ${stable("tUps", [cIdx, {h: "Lever", k: o => LEVERS.indexOf(o.lever), f: o => `<td><b style="color:#E31837">${esc(o.lever)}</b></td>`}, cTxt("Order", o => o.order), cTxt("Customer", o => o.cust, 1), cTxt("Project", o => o.proj, 1),
+      cTxt("STM (DPM)", o => o.person, 1), cTxt("DOO", o => o.dooD, 1), cEur("Value", o => o.val), cDate("Target date", o => o.tdd), cStat, cConf, {h: "Next action", f: o => `<td>${esc(ACTS[o.lever])}</td>`}],
+      ups.slice().sort((a, b) => b.val - a.val), 60)}
+
+  <h2>Will not land in ${esc(P.label)} — iTDD or RTDD after ${fd(P.end / 864e5 + 25569)}</h2>
+  ${stable("tEx", [cIdx, cTxt("Order", o => o.order), cTxt("Customer", o => o.cust, 1), cTxt("Project", o => o.proj, 1), cTxt("STM (DPM)", o => o.person, 1), cTxt("DOO", o => o.dooD, 1),
+      cDate("iTDD", o => o.itdd), cDate("RTDD", o => o.rtdd), {h: "Slipped out of period?", k: o => o.lever === "Pull in" ? 0 : 1, f: o => `<td class="c">${o.lever === "Pull in" ? '<span class="pill st-Due">Yes — iTDD in period</span>' : "No"}</td>`},
+      cEur("Value", o => o.val), cConf], R.filter(o => o.cat === EX).sort((a, b) => b.val - a.val), 60)}
+
+  <h2>Follow-ups — open orders that need action</h2>
+  ${stable("tFu", [cIdx, cTxt("Order", o => o.order), cTxt("Customer", o => o.cust, 1), cTxt("STM (DPM)", o => o.person, 1), cTxt("DOO", o => o.dooD, 1), cEur("Value", o => o.val),
+      cDate("Target date", o => o.tdd), cConf, cTxt("Upd. status", o => o.upd), {h: "Why flagged", k: o => o.fu, f: o => `<td style="color:#5F0229">${esc(o.fu.replace(/; $/, ""))}</td>`}, cTxt("Comment", o => o.comment)],
+      fus.sort((a, b) => b.val - a.val), 60)}
+
+  <h2>${esc(P.label)} progress by DPM (STM)</h2>
+  ${stable("tDpm", [cTxt("DPM", g => g.key, 1), {h: "Orders", k: g => g.n, f: g => `<td class="c">${g.n}</td>`}, cEur("Period eligible", g => elig(g)),
+      ...CATS.map(c => cEur(CSHORT[c], g => g.segs[c] ? g.segs[c].v : 0)), {h: "Achieved %", k: g => elig(g) ? (g.segs[CL] ? g.segs[CL].v : 0) / elig(g) : 0, f: g => `<td class="num">${pct(g.segs[CL] ? g.segs[CL].v : 0, elig(g))}</td>`},
+      {h: "Follow-ups", k: g => fus.filter(o => o.person === g.key).length, f: g => `<td class="c">${fus.filter(o => o.person === g.key).length}</td>`}], dRows, 0)}`;
+
+  // wiring
+  const set = (k, val) => { F[k] = val; if (["dpm", "clus", "cust", "prod", "half", "year"].includes(k)) { F.cat = ""; F.month = ""; } viewMgmt(el); };
+  $("#fHalf").onchange = e => set("half", e.target.value); $("#fYear").onchange = e => set("year", e.target.value);
+  $("#fTm").onchange = e => set("tmode", e.target.value);
+  const tv = $("#fTv"); if (tv) tv.onchange = e => set("tman", Math.max(0, num(+e.target.value)));
+  $("#fDpm").onchange = e => set("dpm", e.target.value); $("#fClus").onchange = e => set("clus", e.target.value);
+  $("#fCust").onchange = e => set("cust", e.target.value); $("#fProd").onchange = e => set("prod", e.target.value);
+  el.querySelectorAll("[data-clear]").forEach(c => c.onclick = () => { const k = c.dataset.clear;
+    if (k === "all") Object.assign(F, {dpm: "(All)", clus: "(All)", cust: "(All)", prod: "(All)", cat: "", month: ""}); else F[k] = (k === "cat" || k === "month") ? "" : "(All)"; viewMgmt(el); });
+  const jump = () => { const t = $("#tDrill"); if (t) t.scrollIntoView({behavior: "smooth", block: "start"}); };
+  el.querySelectorAll(".card[data-act]").forEach(c => c.onclick = () => { F.cat = F.cat === c.dataset.act ? "" : c.dataset.act; viewMgmt(el); jump(); });
+  el.querySelectorAll(".legend span[data-cat]").forEach(c => c.onclick = () => { F.cat = F.cat === c.dataset.cat ? "" : c.dataset.cat; viewMgmt(el); jump(); });
+  el.querySelectorAll("g.hit[data-dim]").forEach(gg => gg.onclick = () => { const d = gg.dataset.dim, k = gg.dataset.key;
+    if (d === "month") { F.month = F.month === k ? "" : k; viewMgmt(el); jump(); }
+    else if (d === "dpm" || d === "clus" || d === "cust") set(d, F[d] === k ? "(All)" : k); });
 }
+const ACTS = {"Convert billing": "Chase billing / acceptance before month-end", "Near completion": "Push customer sign-off and billing", "Recover missed": "New dated plan this week",
+              "Claim": "Assign to the suggested DPM", "Confirm": "Owner to confirm Yes / No for the period", "Pull in": "Review whether RTDD can move back into the period"};
 
 // ------------------------------------------------------------------ Customer & Project
 let selCust = null, selProj = "(All projects)";
 function viewCust(el){
-  const R = D.rows;
+  const R = D.rows, P = period();
   const custs = [...new Set(R.map(o => o.cust))].sort((a, b) => a.localeCompare(b));
   if (!selCust || !custs.includes(selCust)) { const tot = {}; R.forEach(o => tot[o.cust] = (tot[o.cust] || 0) + o.val); selCust = Object.entries(tot).sort((a, b) => b[1] - a[1])[0][0]; selProj = "(All projects)"; }
   const C = R.filter(o => o.cust === selCust);
@@ -287,46 +551,56 @@ function viewCust(el){
   const replan = o => dnum(o.itdd) !== null && dnum(o.rtdd) !== null && dnum(o.itdd) !== dnum(o.rtdd);
   const slip = o => replan(o) ? Math.round((dnum(o.rtdd) - dnum(o.itdd)) / 864e5) : 0;
   const latest = L => { const m = Math.max(...L.map(o => dnum(o.tdd) || 0)); return m ? fd(new Date(m)) : "–"; };
-  const health = L => L.some(o => o.st === "Missed") ? "Red" : (L.some(o => o.st === "Due in 14 days" || replan(o) || H(o).n > 0 || o.cat.startsWith("Excluded")) ? "Amber" : "Green");
+  const health = L => L.some(o => o.st === "Missed") ? "Red" : (L.some(o => o.st === "Due in 14 days" || replan(o) || H(o).n > 0 || o.cat === EX) ? "Amber" : "Green");
   const uniq = (L, f) => new Set(L.map(f).filter(x => x && x !== "(No STM)" && !x.startsWith("n/a"))).size;
   const top = (L, f) => { const s = [...L].filter(o => f(o)).sort((a, b) => b.val - a.val)[0]; return s ? f(s) : "—"; };
-  const nextDue = C.filter(o => o.cat.startsWith("Open") && dnum(o.tdd) !== null && dnum(o.tdd) >= rep).sort((a, b) => dnum(a.tdd) - dnum(b.tdd))[0];
-  const cv = C.reduce((a, o) => a + o.val, 0), hc = health(C);
-  const projRows = projs.map(p => { const L = C.filter(o => o.proj === p); return {p, L, v: L.reduce((a, o) => a + o.val, 0)}; }).sort((a, b) => b.v - a.v);
+  const nextDue = C.filter(o => isOpen(o.cat) && dnum(o.tdd) !== null && dnum(o.tdd) >= rep).sort((a, b) => dnum(a.tdd) - dnum(b.tdd))[0];
+  const cv = sumV(C), hc = health(C);
+  const projRows = projs.map(p => { const L = C.filter(o => o.proj === p); return {p, L, v: sumV(L)}; }).sort((a, b) => b.v - a.v);
   const list = C.filter(o => selProj === "(All projects)" || o.proj === selProj).sort((a, b) => b.val - a.val);
+  const pBars = group(C, o => o.proj).sort((a, b) => b.v - a.v).slice(0, 15).map(g => ({...g, sel: selProj === g.key}));
+  const mg = group(list, o => { const d = toDate(o.tdd); return d ? d.getUTCFullYear() * 100 + d.getUTCMonth() : 0; });
+  const mCols = mg.filter(g => g.key).sort((a, b) => a.key - b.key).slice(-14).map(g => ({...g, label: MON[g.key % 100] + " " + String(Math.floor(g.key / 100)).slice(2), title: MON[g.key % 100] + " " + Math.floor(g.key / 100)}));
   el.innerHTML = `
   <div class="controls">
     <div><label>Customer</label><select id="cSel">${opts(custs, selCust)}</select></div>
     <div><label>Project</label><select id="pSel">${opts(["(All projects)", ...projs.sort()], selProj)}</select></div>
+    <div class="sub">Categories follow the period chosen on the Management tab (${esc(P.label)}).</div>
   </div>
   <div class="cards">
     ${card("Expected revenue", meur(cv), pct(cv, D.total) + " of total · " + C.length + " orders", "#E31837")}
     ${card("Projects · team size", projs.length + " projects", uniq(C, o => o.person) + " DPM / STM · " + uniq(C, o => o.doo) + " DOO", "#4D4D4F")}
     ${card("Latest delivery date", latest(C), "next open due: " + (nextDue ? fd(nextDue.tdd) : "–"), "#4A453D")}
-    ${card("H2 closed + billing", meur(sumBy(C, o => o.cat === "Closed" || o.cat === "Billing")), "open " + eur(sumBy(C, o => o.cat.startsWith("Open"))) + " · excl. 2027+ " + eur(sumBy(C, o => o.cat.startsWith("Excluded"))), "#2E7D32")}
-    ${card("Missed · due ≤14 days", C.filter(o => o.st === "Missed").length + " · " + C.filter(o => o.st === "Due in 14 days").length, C.filter(o => !o.upd && o.cat !== "Closed" && o.src !== "All Orders only").length + " without status update", "#5F0229")}
+    ${card(P.label + " closed + billing", meur(sumBy(C, o => o.cat === CL || o.cat === BI)), "open " + eur(sumBy(C, o => isOpen(o.cat))) + " · excluded " + eur(sumBy(C, o => o.cat === EX)), "#2E7D32")}
+    ${card("Missed · due ≤14 days", C.filter(o => o.st === "Missed").length + " · " + C.filter(o => o.st === "Due in 14 days").length, C.filter(o => !o.upd && o.cat !== CL && o.src !== "All Orders only").length + " without status update", "#5F0229")}
     ${card("Re-planning", C.filter(replan).length + " re-planned", C.reduce((a, o) => a + H(o).n, 0) + " RTDD changes · max slip " + Math.max(0, ...C.map(slip)) + " days", "#0A0838")}
     ${card("Health", `<span class="pill h-${hc}" style="font-size:18px">${hc}</span>`, "Red = missed · Amber = due soon / re-planned / slipped", "#4D4D4F")}
   </div>
+  <div class="grid2">
+    <div class="panel"><h3>Revenue by project</h3><div class="sub">Top 15 · click a bar to select the project</div>${legend(CATS)}${hstack(pBars, {cats: CATS, aria: "Revenue by project", click: true, dim: "proj", lw: 210})}</div>
+    <div class="panel"><h3>Delivery timeline${selProj !== "(All projects)" ? " — " + esc(selProj) : ""}</h3><div class="sub">Revenue by target month (last 14 months with orders)</div>${legend(CATS)}${mCols.length ? vstack(mCols, {cats: CATS, aria: "Revenue by target month"}) : "<p class='sub'>No dated orders.</p>"}</div>
+  </div>
   <h2>Projects of ${esc(selCust)}</h2>
-  ${table(["Project", "Orders", "Revenue", "% of customer", "Main DPM", "DPMs", "Main DOO", "DOOs", "Latest delivery", "Re-planned", "Max slip (d)", "RTDD changes", "Missed", "Due ≤14d", "Unclaimed", "Closed + billing", "Open", "Excl. 2027+", "Health"],
+  ${table(["Project", "Orders", "Revenue", "% of customer", "Main DPM", "DPMs", "Main DOO", "DOOs", "Latest delivery", "Re-planned", "Max slip (d)", "RTDD changes", "Missed", "Due ≤14d", "Unclaimed", "Closed + billing", "Open", "Excluded", "Health"],
     projRows.map(({p, L, v}) => { const h = health(L); return `<tr${p === selProj ? ' style="outline:2px solid #E31837"' : ""}>${cell(p, "chk")}<td class="c">${L.length}</td><td class="num">${eur(v)}</td><td class="num">${pct(v, cv)}</td>
       ${cell(top(L, o => o.person !== "(No STM)" ? o.person : ""), "chk")}<td class="c">${uniq(L, o => o.person)}</td>${cell(top(L, o => o.doo ? o.dooD : ""))}<td class="c">${uniq(L, o => o.doo)}</td>
       <td class="c">${latest(L)}</td><td class="c">${L.filter(replan).length}</td><td class="c">${Math.max(0, ...L.map(slip))}</td><td class="c">${L.reduce((a, o) => a + H(o).n, 0)}</td>
       <td class="c">${L.filter(o => o.st === "Missed").length}</td><td class="c">${L.filter(o => o.st === "Due in 14 days").length}</td><td class="c">${D.unc.filter(u => u.cust === selCust && u.proj === p).length}</td>
-      <td class="num">${eur(sumBy(L, o => o.cat === "Closed" || o.cat === "Billing"))}</td><td class="num">${eur(sumBy(L, o => o.cat.startsWith("Open")))}</td><td class="num">${eur(sumBy(L, o => o.cat.startsWith("Excluded")))}</td>
+      <td class="num">${eur(sumBy(L, o => o.cat === CL || o.cat === BI))}</td><td class="num">${eur(sumBy(L, o => isOpen(o.cat)))}</td><td class="num">${eur(sumBy(L, o => o.cat === EX))}</td>
       <td class="c"><span class="pill h-${h}">${h}</span></td></tr>`; }))}
   <h2>Orders — ${esc(selCust)}${selProj !== "(All projects)" ? " · " + esc(selProj) : ""}</h2>
-  ${table(["#", "Order", "Value", "Project", "STM (DPM)", "DOO", "iTDD", "RTDD", "Target date", "Status", "Days to target", "RTDD changes", "RTDD history", "H2 category", "Confirmed", "Upd. status", "Comment"],
-    list.map((o, i) => `<tr><td class="c">${i + 1}</td>${cell(o.order)}<td class="num">${eur(o.val)}</td>${cell(o.proj, "chk")}${cell(o.person, "chk")}${cell(o.dooD, "chk")}
-      <td class="c">${fd(o.itdd)}</td><td class="c">${fd(o.rtdd)}</td><td class="c"><b>${fd(o.tdd)}</b></td><td class="c">${pill(o.st)}</td><td class="c">${S(o.days)}</td>
-      <td class="c">${H(o).n > 1 ? `<span class="pill st-Missed">${H(o).n}</span>` : H(o).n === 1 ? '<span class="pill st-Due">1</span>' : "0"}</td>${cell(H(o).t)}${cell(o.cat)}${cell(o.conf, "c")}${cell(o.upd, "c")}${cell(o.comment)}</tr>`))}`;
+  ${stable("tCust", [cIdx, cTxt("Order", o => o.order), cEur("Value", o => o.val), cTxt("Project", o => o.proj, 1), cTxt("STM (DPM)", o => o.person, 1), cTxt("DOO", o => o.dooD, 1),
+      cDate("iTDD", o => o.itdd), cDate("RTDD", o => o.rtdd), cDate("Target date", o => o.tdd, 1), cStat, {h: "Days to target", k: o => num(o.days), f: o => `<td class="c">${S(o.days)}</td>`},
+      {h: "RTDD changes", k: o => H(o).n, f: o => `<td class="c">${H(o).n > 1 ? `<span class="pill st-Missed">${H(o).n}</span>` : H(o).n === 1 ? '<span class="pill st-Due">1</span>' : "0"}</td>`},
+      cTxt("RTDD history", o => H(o).t), cCat, cConf, cTxt("Upd. status", o => o.upd), cTxt("Comment", o => o.comment)], list, 0)}`;
   $("#cSel").onchange = e => { selCust = e.target.value; selProj = "(All projects)"; viewCust(el); };
   $("#pSel").onchange = e => { selProj = e.target.value; viewCust(el); };
+  el.querySelectorAll("g.hit[data-dim=proj]").forEach(gg => gg.onclick = () => { selProj = selProj === gg.dataset.key ? "(All projects)" : gg.dataset.key; viewCust(el); });
 }
 
 // ------------------------------------------------------------------ Person
 let selPerson = null, selMode = "STM or DOO", selStatus = "(All)";
+const STC = {"Missed": "#E31837", "Due in 14 days": "#C98A1B", "Re-planned": "#8E2C5A", "On track": "#2E8540", "No date": "#6D6E70"};
 function viewPerson(el){
   const team = D.team; if (!team.length) { el.innerHTML = "<p>No DPMs in the Team Summary tab.</p>"; return; }
   if (!selPerson || !team.find(t => t.name === selPerson)) selPerson = team[0].name;
@@ -334,7 +608,17 @@ function viewPerson(el){
   const mine = D.rows.filter(o => (selMode !== "DOO only" && num(o.dpmIdx) === t.idx) || (selMode !== "STM only" && num(o.dooIdx) === t.idx));
   const statuses = ["(All)", "Missed", "Missed + Due in 14 days", "Due in 14 days", "Re-planned", "On track", "No date"];
   const shown = mine.filter(o => selStatus === "(All)" || o.st === selStatus || (selStatus === "Missed + Due in 14 days" && (o.st === "Missed" || o.st === "Due in 14 days"))).sort((a, b) => b.val - a.val);
-  const v = mine.reduce((a, o) => a + o.val, 0);
+  const v = sumV(mine);
+  // status chart: one bar per status (single series → one colour per status, labelled)
+  const sts = Object.keys(STC).map(s => ({s, L: mine.filter(o => o.st === s)}));
+  const mx = Math.max(1, ...sts.map(x => sumV(x.L)));
+  const W = 900, BH = 22, G = 10, LW = 150;
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${sts.length * (BH + G) + 6}" role="img" aria-label="Portfolio by status">`;
+  sts.forEach((x, i) => { const y = 4 + i * (BH + G), w = (W - LW - 130) * sumV(x.L) / mx, sel = selStatus === x.s;
+    svg += `<g class="hit" data-st="${esc(x.s)}"><rect x="0" y="${y - 3}" width="${W}" height="${BH + 6}" fill="transparent"/><text x="${LW - 8}" y="${y + 15}" text-anchor="end" font-size="12" ${sel ? 'font-weight="bold"' : ""}>${esc(x.s)}</text>
+      <rect class="m${sel ? " sel" : ""}" x="${LW}" y="${y}" width="${Math.max(1, w)}" height="${BH}" rx="3" fill="${STC[x.s]}" data-tip="<b>${esc(x.s)}</b><br>${x.L.length} orders · ${eur(sumV(x.L))}"/>
+      <text x="${LW + w + 6}" y="${y + 15}" font-size="12" class="ax">${x.L.length} · ${meur(sumV(x.L))}</text></g>`; });
+  svg += "</svg>";
   el.innerHTML = `
   <div class="controls">
     <div><label>DPM (Gold Name)</label><select id="perSel">${opts(team.map(x => x.name), selPerson)}</select></div>
@@ -351,13 +635,15 @@ function viewPerson(el){
     ${card("Aged > 1 year", mine.filter(o => num(o.age) > 365).length, "since customer signature", "#0A0838")}
     ${card("No project", mine.filter(o => o.proj === "No project linked").length, "project missing", "#E31837")}
   </div>
-  ${table(["#", "Order", "Customer", "Project", "Product", "Cluster", "DOO", "Value", "iTDD", "RTDD", "Target date", "Based on", "Status", "Days to target", "Order age", "Role"],
-    shown.map((o, i) => `<tr><td class="c">${i + 1}</td>${cell(o.order)}${cell(o.cust, "chk")}${cell(o.proj, "chk")}${cell(o.prod)}${cell(o.clus, "chk")}${cell(o.dooD, "chk")}
-      <td class="num">${eur(o.val)}</td><td class="c">${fd(o.itdd)}</td><td class="c">${fd(o.rtdd)}</td><td class="c"><b>${fd(o.tdd)}</b></td>${cell(o.based, "c")}<td class="c">${pill(o.st)}</td>
-      <td class="c">${S(o.days)}</td><td class="c">${S(o.age)}</td><td class="c">${num(o.dpmIdx) === t.idx && num(o.dooIdx) === t.idx ? "STM + DOO" : num(o.dpmIdx) === t.idx ? "STM" : "DOO"}</td></tr>`))}`;
+  <div class="panel" style="margin-bottom:12px"><h3>Portfolio by delivery status</h3><div class="sub">Click a bar to filter the list (click again to clear)</div>${svg}</div>
+  ${stable("tPer", [cIdx, cTxt("Order", o => o.order), cTxt("Customer", o => o.cust, 1), cTxt("Project", o => o.proj, 1), cTxt("Product", o => o.prod), cTxt("Cluster", o => o.clus, 1), cTxt("DOO", o => o.dooD, 1),
+      cEur("Value", o => o.val), cDate("iTDD", o => o.itdd), cDate("RTDD", o => o.rtdd), cDate("Target date", o => o.tdd, 1), cTxt("Based on", o => o.based), cStat,
+      {h: "Days to target", k: o => num(o.days), f: o => `<td class="c">${S(o.days)}</td>`}, {h: "Order age", k: o => num(o.age), f: o => `<td class="c">${S(o.age)}</td>`},
+      {h: "Role", f: o => `<td class="c">${num(o.dpmIdx) === t.idx && num(o.dooIdx) === t.idx ? "STM + DOO" : num(o.dpmIdx) === t.idx ? "STM" : "DOO"}</td>`}], shown, 0)}`;
   $("#perSel").onchange = e => { selPerson = e.target.value; viewPerson(el); };
   $("#modeSel").onchange = e => { selMode = e.target.value; viewPerson(el); };
   $("#stSel").onchange = e => { selStatus = e.target.value; viewPerson(el); };
+  el.querySelectorAll("g.hit[data-st]").forEach(gg => gg.onclick = () => { selStatus = selStatus === gg.dataset.st ? "(All)" : gg.dataset.st; viewPerson(el); });
 }
 
 // ------------------------------------------------------------------ Unclaimed
@@ -367,7 +653,15 @@ function viewUnc(el){
   const custs = ["(All)", ...[...new Set(U.map(u => u.cust))].sort()], dpms = ["(All)", ...[...new Set(U.map(u => u.dpm))].sort()];
   if (!custs.includes(uCust)) uCust = "(All)"; if (!dpms.includes(uDpm)) uDpm = "(All)";
   const L = U.filter(u => (uCust === "(All)" || u.cust === uCust) && (uDpm === "(All)" || u.dpm === uDpm));
-  const byD = {}; L.forEach(u => { const b = byD[u.dpm] = byD[u.dpm] || {p: 0, c: 0, v: 0}; u.link === "Same project" ? b.p++ : b.c++; b.v += u.val; });
+  const byD = {}; L.forEach(u => { const b = byD[u.dpm] = byD[u.dpm] || {p: 0, c: 0, v: 0, n: 0}; u.link === "Same project" ? b.p++ : b.c++; b.v += u.val; b.n++; });
+  const dList = Object.entries(byD).sort((a, b) => b[1].v - a[1].v);
+  const mx = Math.max(1, ...dList.map(x => x[1].v)), W = 900, BH = 20, G = 8, LW = 190;
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${dList.length * (BH + G) + 6}" role="img" aria-label="Unclaimed value by suggested DPM">`;
+  dList.forEach(([d, b], i) => { const y = 4 + i * (BH + G), w = (W - LW - 120) * b.v / mx, sel = uDpm === d;
+    svg += `<g class="hit" data-d="${esc(d)}"><rect x="0" y="${y - 3}" width="${W}" height="${BH + 6}" fill="transparent"/><text x="${LW - 8}" y="${y + 14}" text-anchor="end" font-size="12" ${sel ? 'font-weight="bold"' : ""}>${esc(d.length > 28 ? d.slice(0, 27) + "…" : d)}</text>
+      <rect class="m${sel ? " sel" : ""}" x="${LW}" y="${y}" width="${Math.max(1, w)}" height="${BH}" rx="3" fill="#8E2C5A" data-tip="<b>${esc(d)}</b><br>${b.n} orders (${b.p} same project · ${b.c} same customer)<br>${eur(b.v)}"/>
+      <text x="${LW + w + 6}" y="${y + 14}" font-size="12" class="ax">${meur(b.v)} · ${b.n}</text></g>`; });
+  svg += "</svg>";
   el.innerHTML = `
   <div class="sub">Orders whose STM is not in the team, on projects / customers the team already handles (from the last Refresh Data).</div>
   <div class="controls">
@@ -375,43 +669,49 @@ function viewUnc(el){
     <div><label>Suggested DPM</label><select id="udSel">${opts(dpms, uDpm)}</select></div>
   </div>
   <div class="cards">
-    ${card("Selection", L.length + " orders", eur(L.reduce((a, u) => a + u.val, 0)), "#E31837")}
+    ${card("Selection", L.length + " orders", eur(sumV(L)), "#E31837")}
     ${card("Same project", L.filter(u => u.link === "Same project").length, "strong link", "#5F0229")}
     ${card("Same customer", L.filter(u => u.link === "Same customer").length, "weaker link", "#B7791F")}
     ${card("No STM at all", L.filter(u => u.stm === "(none)").length, "nobody assigned", "#4D4D4F")}
   </div>
-  <div class="grid2"><div>
-  <h2 class="dark">Per suggested DPM</h2>
-  ${table(["Suggested DPM", "Same project", "Same customer", "Value"], Object.entries(byD).sort((a, b) => b[1].v - a[1].v).map(([d, b]) => `<tr>${cell(d)}<td class="c">${b.p}</td><td class="c">${b.c}</td><td class="num">${eur(b.v)}</td></tr>`))}
-  </div><div></div></div>
+  <div class="panel"><h3>Unclaimed value by suggested DPM</h3><div class="sub">Click a bar to filter the list</div>${svg || ""}</div>
   <h2>Orders to claim</h2>
-  ${table(["#", "Linked by", "Source", "Order", "Customer", "Project", "Current STM", "DOO", "Value", "Target date", "Status", "Suggested DPM", "Other team DPMs"],
-    L.slice(0, 1000).map((u, i) => `<tr><td class="c">${i + 1}</td><td><span class="pill ${u.link === "Same project" ? "st-Missed" : "st-Due"}">${esc(u.link)}</span></td>${cell(u.src)}${cell(u.order)}${cell(u.cust, "chk")}${cell(u.proj, "chk")}
-      ${u.stm === "(none)" ? '<td class="blank">(none)</td>' : cell(u.stm)}${cell(u.doo)}<td class="num">${eur(u.val)}</td><td class="c">${fd(u.tdd)}</td>${cell(u.ostat)}<td><b>${esc(u.dpm)}</b></td>${cell(u.others)}</tr>`))}`;
+  ${stable("tUnc", [cIdx, {h: "Linked by", k: u => u.link, f: u => `<td><span class="pill ${u.link === "Same project" ? "st-Missed" : "st-Due"}">${esc(u.link)}</span></td>`}, cTxt("Source", u => u.src), cTxt("Order", u => u.order),
+      cTxt("Customer", u => u.cust, 1), cTxt("Project", u => u.proj, 1), {h: "Current STM", k: u => u.stm, f: u => u.stm === "(none)" ? '<td class="blank">(none)</td>' : cell(u.stm)}, cTxt("DOO", u => u.doo),
+      cEur("Value", u => u.val), cDate("Target date", u => u.tdd), cTxt("Status", u => u.ostat), {h: "Suggested DPM", k: u => u.dpm, f: u => `<td><b>${esc(u.dpm)}</b></td>`}, cTxt("Other team DPMs", u => u.others)], L, 1000)}`;
   $("#ucSel").onchange = e => { uCust = e.target.value; viewUnc(el); };
   $("#udSel").onchange = e => { uDpm = e.target.value; viewUnc(el); };
+  el.querySelectorAll("g.hit[data-d]").forEach(gg => gg.onclick = () => { uDpm = uDpm === gg.dataset.d ? "(All)" : gg.dataset.d; viewUnc(el); });
 }
 
 // ------------------------------------------------------------------ All orders
-let oq = "", oSt = "(All)", oCat = "(All)";
+let oq = "", oSt = "(All)", oCat = "(All)", oDpm = "(All)", oClus = "(All)", oProd = "(All)", oTeam = "(All)";
 function viewOrders(el){
-  const sts = ["(All)", ...new Set(D.rows.map(o => o.st))], cats = ["(All)", ...new Set(D.rows.map(o => o.cat))];
+  const R = D.rows;
+  const sts = ["(All)", ...uniqSorted(R.map(o => o.st))], cats = ["(All)", ...CATS.map(c => CSHORT[c])];
   const q = oq.toLowerCase();
-  const L = D.rows.filter(o => (oSt === "(All)" || o.st === oSt) && (oCat === "(All)" || o.cat === oCat) &&
-      (!q || [o.order, o.cust, o.proj, o.person, o.doo, o.prod, o.clus].some(x => S(x).toLowerCase().includes(q)))).sort((a, b) => b.val - a.val);
+  const L = R.filter(o => (oSt === "(All)" || o.st === oSt) && (oCat === "(All)" || CSHORT[o.cat] === oCat) && (oDpm === "(All)" || o.person === oDpm) &&
+      (oClus === "(All)" || o.clus === oClus) && (oProd === "(All)" || o.prod === oProd) && (oTeam === "(All)" || (oTeam === "Team only" ? o.team === "Team" : o.team !== "Team")) &&
+      (!q || [o.order, o.cust, o.proj, o.person, o.doo, o.prod, o.clus, o.comment].some(x => S(x).toLowerCase().includes(q)))).sort((a, b) => b.val - a.val);
   el.innerHTML = `
   <div class="controls">
-    <div><label>Search (order, customer, project, STM, DOO…)</label><input type="search" id="oq" value="${esc(oq)}" placeholder="type to filter"></div>
+    <div><label>Search (order, customer, project, STM, DOO, comment…)</label><input type="search" id="oq" value="${esc(oq)}" placeholder="type to filter" style="min-width:280px"></div>
     <div><label>Status</label><select id="oSt">${opts(sts, oSt)}</select></div>
-    <div><label>H2 category</label><select id="oCat">${opts(cats, oCat)}</select></div>
-    <div class="sub">${L.length.toLocaleString()} orders · ${eur(L.reduce((a, o) => a + o.val, 0))}${L.length > 500 ? " · showing first 500" : ""}</div>
+    <div><label>${esc(period().label)} category</label><select id="oCat">${opts(cats, oCat)}</select></div>
+    <div><label>STM (DPM)</label><select id="oDpm">${opts(["(All)", ...uniqSorted(R.map(o => o.person))], oDpm)}</select></div>
+    <div><label>Cluster</label><select id="oClus">${opts(["(All)", ...uniqSorted(R.map(o => o.clus))], oClus)}</select></div>
+    <div><label>Product</label><select id="oProd">${opts(["(All)", ...uniqSorted(R.map(o => o.prod))], oProd)}</select></div>
+    <div><label>Team</label><select id="oTeam">${opts(["(All)", "Team only", "Not team"], oTeam)}</select></div>
+    <button class="btn ghost" id="oClr">Clear filters</button>
   </div>
-  ${table(["#", "Order", "Customer", "Project", "STM (DPM)", "Team", "DOO", "Cluster", "Product", "Value", "Share", "Target date", "Status", "H2 category", "Source"],
-    L.slice(0, 500).map((o, i) => `<tr><td class="c">${i + 1}</td>${cell(o.order)}${cell(o.cust, "chk")}${cell(o.proj, "chk")}${cell(o.person, "chk")}${cell(o.team, "c")}${cell(o.dooD, "chk")}${cell(o.clus, "chk")}${cell(o.prod)}
-      <td class="num">${eur(o.val)}</td><td class="num">${pct(o.val, D.total)}</td><td class="c">${fd(o.tdd)}</td><td class="c">${pill(o.st)}</td>${cell(o.cat)}${cell(o.src)}</tr>`))}`;
+  <div class="sub">${L.length.toLocaleString()} orders · ${eur(sumV(L))} · click a column header to sort</div>
+  ${stable("tAll", [cIdx, cTxt("Order", o => o.order), cTxt("Customer", o => o.cust, 1), cTxt("Project", o => o.proj, 1), cTxt("STM (DPM)", o => o.person, 1), cTxt("Team", o => o.team), cTxt("DOO", o => o.dooD, 1),
+      cTxt("Cluster", o => o.clus, 1), cTxt("Product", o => o.prod), cEur("Value", o => o.val), {h: "Share", k: o => o.val, f: o => `<td class="num">${pct(o.val, D.total)}</td>`},
+      cDate("Target date", o => o.tdd), cStat, cCat, cTxt("Source", o => o.src)], L, 500)}`;
   const box = $("#oq"); box.oninput = e => { oq = e.target.value; const pos = e.target.selectionStart; viewOrders(el); const nb = $("#oq"); nb.focus(); nb.setSelectionRange(pos, pos); };
-  $("#oSt").onchange = e => { oSt = e.target.value; viewOrders(el); };
-  $("#oCat").onchange = e => { oCat = e.target.value; viewOrders(el); };
+  const bind = (id, fn) => $(id).onchange = e => { fn(e.target.value); viewOrders(el); };
+  bind("#oSt", x => oSt = x); bind("#oCat", x => oCat = x); bind("#oDpm", x => oDpm = x); bind("#oClus", x => oClus = x); bind("#oProd", x => oProd = x); bind("#oTeam", x => oTeam = x);
+  $("#oClr").onclick = () => { oq = ""; oSt = oCat = oDpm = oClus = oProd = oTeam = "(All)"; viewOrders(el); };
 }
 </script>
 </body>
