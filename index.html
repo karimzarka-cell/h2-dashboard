@@ -542,7 +542,7 @@ function parse(wb, fname){
   const arows = rows.concat(xrows), amrows = hasM ? mrows.concat(xmrows) : arows;
   if (!rows.length) throw new Error("no orders found in the Calc tab — was the workbook saved after recalculation?");
   const hist = {}; grid(wb.Sheets["RTDD Summary"]).slice(1).forEach(R => { if (S(R[0])) hist[S(R[0])] = {n: num(R[1]), t: S(R[2])}; });
-  const team = []; grid(wb.Sheets["Team Summary"]).slice(5).forEach(R => { if (S(R[3])) team.push({idx: num(R[0]), name: S(R[3]), cluster: S(R[1]), mgr: S(R[2])}); });
+  const team = []; grid(wb.Sheets["Team Summary"]).slice(5).forEach(R => { if (S(R[3])) team.push({idx: num(R[0]), name: S(R[3]), cluster: S(R[1]), mgr: S(R[2]), status: S(R[6])}); });
   const UG = grid(wb.Sheets["Unclaimed Orders"]);
   const uh = (UG[10] || []).map(x => S(x).toLowerCase()), uc = n => uh.indexOf(n.toLowerCase());   // v0.8: read by the header row (layout changes in v2.3)
   const U = (R, n) => { const p = uc(n); return p >= 0 ? R[p] : ""; };
@@ -708,7 +708,7 @@ function viewTI(el){
   const ageBy = new Map(); D.rows.forEach(o => { const ix = num(o.dpmIdx), a = num(o.age); if (ix > 0 && a > 0) { const x = ageBy.get(ix) || [0, 0]; x[0] += a; x[1]++; ageBy.set(ix, x); } });
   const idxOf = new Map(D.team.map(t => [t.name, t.idx]));
   const enrich = L => L.map(o => { const x = ageBy.get(idxOf.get(o.dpm)); return Object.assign({}, o, {wl: o.open > 0 ? wlBand(o.w) : "No open orders", age: x ? x[0] / x[1] : ""}); });
-  const byCust = !!TI.cust, base = enrich(byCust ? scoreFor(TI.cust, T) : T.sc);
+  teamShown(); const byCust = !!TI.cust, base = enrich(byCust ? scoreFor(TI.cust, T) : T.sc).filter(o => !D._hidden.includes(o.dpm));
   const mgrVals = valueList(base, o => o.mgr).sort((a, b) => a[0].localeCompare(b[0]));
   const L = base.filter(o => (TI.clus === "(All)" || o.clus === TI.clus) && (TI.wl === "(All)" || o.wl === TI.wl) && (!TI.dpm || TI.dpm.has(o.dpm)) && (!TI.mgr || TI.mgr.has(o.mgr)));
   const allAge = [...ageBy.values()].reduce((a, x) => [a[0] + x[0], a[1] + x[1]], [0, 0]), avgAgeT = allAge[1] ? allAge[0] / allAge[1] : "";
@@ -746,7 +746,7 @@ function viewTI(el){
     <div class="panel"><h3>Open orders by DPM Cluster</h3><div class="sub">Click a cluster to filter the scorecard</div>
       ${T.cl.length ? donut(T.cl.map(o => ({label: o.name, v: o.open})), {fmt: fmt0, center: "open orders", dim: "ticlus", sel: TI.clus, aria: "Open orders by DPM Cluster"}) : '<p class="sub">No cluster data.</p>'}</div>
   </div>
-  ${stable("tSc", [cIdx, cTxt("DPM Cluster", o => o.clus), cTxt("Manager", o => o.mgr), {h: "DPM", k: o => o.dpm, f: o => `<td><b>${esc(o.dpm)}</b></td>`},
+  ${stable("tSc", [cIdx, cTxt("DPM Cluster", o => o.clus), cTxt("Manager", o => o.mgr), {h: "DPM", k: o => o.dpm, f: o => `<td><b>${nmTag(o.dpm)}</b></td>`},
      cNum("Open orders", o => o.open), cNum("Weighted orders", o => o.w, fmt1), cNum("Avg complexity", o => o.avg, v => num(v).toFixed(2)),
      {h: "Missed", k: o => o.miss, x: o => o.miss, f: o => `<td class="num">${o.miss ? `<span class="need">${fmt0(o.miss)}</span>` : 0}</td>`}, cNum("Missed %", o => o.missp, pctv),
      cEur("Managed revenue", o => o.rev), cNum("Share of workload", o => o.share, v => (100 * num(v)).toFixed(1) + "%"),
@@ -925,7 +925,7 @@ function viewAlloc(el){
   const sumP = L => M.map((_, i) => L.reduce((a, r) => a + (signed(r) ? 0 : num(r.m[i]) * r.prob), 0));
   // DPM utilisation (team list order)
   const orders = new Map(); D.rows.forEach(o => { const ix = num(o.dpmIdx); if (ix > 0) orders.set(ix, (orders.get(ix) || 0) + 1); });
-  const dpms = D.team.map(t => {
+  const dpms = teamShown().map(t => {
     const L = A.rows.filter(r => r.idx === t.idx && !r.gen), S1 = L.filter(signed);
     const now = S1.reduce((a, r) => a + fNow(r), 0), nxt = cur >= 0 && cur + 1 < M.length ? S1.reduce((a, r) => a + num(r.m[cur + 1]), 0) : now;
     const peak = Math.max(0, ...M.map((_, i) => i < cur || i > cur + 11 ? 0 : S1.reduce((a, r) => a + num(r.m[i]), 0)));
@@ -972,7 +972,7 @@ function viewAlloc(el){
     <div class="panel"><h3>Customer <select id="alC">${custs.filter(c => c.rows.length).map(c => `<option${c.cust === cSel ? " selected" : ""}>${esc(c.cust)}</option>`).join("")}</select></h3>${cusR}</div>
   </div>
   <h2>A · DPM utilisation — signed FTE this month vs open orders</h2>
-  ${stable("tAlD", [cIdx, cTxt("DPM Cluster", o => o.clus), cTxt("Manager", o => o.mgr), {h: "DPM", k: o => o.dpm, f: o => `<td><b>${esc(o.dpm)}</b></td>`}, cNum("Signed FTE", o => o.now, fmt1),
+  ${stable("tAlD", [cIdx, cTxt("DPM Cluster", o => o.clus), cTxt("Manager", o => o.mgr), {h: "DPM", k: o => o.dpm, f: o => `<td><b>${nmTag(o.dpm)}</b></td>`}, cNum("Signed FTE", o => o.now, fmt1),
       cNum("Next month", o => o.nxt, fmt1), cNum("Peak 12 m", o => o.peak, fmt1), cNum("Customers", o => o.cust), cNum("Open orders", o => o.orders), cNum("Orders per FTE", o => o.opf, fmt1),
       cNum("Pipeline FTE", o => o.pipe, fmt1), {h: "Utilisation", k: o => o.flag, f: o => flagTd(o.flag)}], dpms, 400)}
   <h2>B · Customers — FTE vs open orders</h2>
@@ -1043,6 +1043,20 @@ function allocFor(idx){
   const acc = new Map(); L.forEach(r => { const k = r.cust || r.raw; acc.set(k, (acc.get(k) || 0) + (cur >= 0 ? num(r.m[cur]) : 0)); });
   return {rows: L, now, next, f3, freeFrom: drop ? drop.lab : "", acc, has: L.length > 0};
 }
+// v1.0 (5-Nov): resigned DPMs - flagged while they still have orders or allocation, hidden once both are at zero
+function isResigned(t){ return /resign/i.test(S(t && t.status)); }
+function teamShown(){
+  if (D._team) return D._team;
+  const od = new Set(); D.rows.forEach(o => { if (num(o.dpmIdx) > 0) od.add(num(o.dpmIdx)); if (num(o.dooIdx) > 0) od.add(num(o.dooIdx)); });
+  const A = D.al, live = idx => A && A.rows.some(r => r.idx === idx && r.won === "Y" && r.m.some((f, i) => i >= Math.max(0, A.cur) && num(f) > 0));
+  D._hidden = D.team.filter(t => isResigned(t) && !od.has(t.idx) && !live(t.idx)).map(t => t.name);
+  return D._team = D.team.filter(t => !D._hidden.includes(t.name));
+}
+const STATUS_OF = () => D._stat || (D._stat = new Map(D.team.map(t => [t.name, t.status])));
+function nmTag(name){                                       // DPM name + a pill when the DPM tab says Resigned / ML / ...
+  const st = S(STATUS_OF().get(name));
+  return esc(name) + (st && !/^active$/i.test(st) ? ` <span class="pill" style="background:${/resign/i.test(st) ? "#5F0229" : "#B7791F"};color:#fff;font-size:10px;padding:1px 6px">${esc(st)}</span>` : "");
+}
 function alDefaultReg(){ const A = D.al; if (!A) return "(All)"; const regs = uniqSorted(A.rows.map(r => r.region)); return regs.includes("Egypt") ? "Egypt" : "(All)"; }
 function bandwidth(w, al){
   if (!al || !al.has) return w > CFG.high ? "Overloaded" : "No allocation";
@@ -1070,7 +1084,7 @@ function dpmCard(t){
   p.alFlag = al && al.has ? alFlag(al.now, D.al.bands) : "No allocation";
   return p;
 }
-function scAll(){ if (!D._sc) D._sc = D.team.map(dpmCard); return D._sc; }
+function scAll(){ if (!D._sc) D._sc = teamShown().map(dpmCard); return D._sc; }
 function scSet(){
   const all = scAll();
   if (SC.lvl === "Team") return all;
@@ -1099,6 +1113,7 @@ function viewSC(el){
     if (p.al) p.al.acc.forEach((f, c) => { const a = acc.get(c) || {cust: c, n: 0, w: 0, rev: 0, fte: 0, dpms: new Set(), prods: new Set()}; a.fte += f; if (f > 0) a.dpms.add(p.dpm); acc.set(c, a); }); });
   const AC = [...acc.values()].map(a => Object.assign(a, {shN: n ? a.n / n : 0, shF: fte ? a.fte / fte : 0, nd: a.dpms.size, np: a.prods.size}))
     .map(a => Object.assign(a, {gap: a.fte > 0 && a.n === 0 ? "FTE, no orders" : a.n > 0 && a.fte === 0 && fte > 0 ? "Orders, no FTE" : fte > 0 && Math.abs(a.shN - a.shF) >= 0.2 ? (a.shN > a.shF ? "More orders than FTE" : "More FTE than orders") : ""}))
+    .filter(a => a.n > 0 || a.fte > 0.0001)                      // 5-Nov: no orders and no FTE now (left the project) -> not shown
     .sort((a, b) => b.n - a.n || b.fte - a.fte);
   // products
   const pr = new Map(); O.forEach(o => { const k = o.prod || "(blank)"; const x = pr.get(k) || {prod: k, type: ptype(k), n: 0, rev: 0, dpms: new Set()}; x.n++; x.rev += o.val; pr.set(k, x); });
@@ -1109,7 +1124,7 @@ function viewSC(el){
   const ag = ["Green", "Amber", "Red"].map(r => ({label: r === "Green" ? `≤ ${CFG.ageG} d` : r === "Amber" ? `${CFG.ageG + 1}–${CFG.ageA} d` : `> ${CFG.ageA} d`, r, a: O.filter(o => ageRag(o.age) === r).length}));
   const hold = O.filter(isHold).sort((a, b) => b.val - a.val), pend = O.filter(isPend).sort((a, b) => b.val - a.val);
   const p1 = one ? P[0] : null;
-  const crumbs = `<a href="#" data-zoom="Team|(All)">Team</a>` + (SC.lvl !== "Team" ? ` ▸ ${p1 ? `<a href="#" data-zoom="Manager|${esc(p1.mgr)}">${esc(p1.mgr)}</a> ▸ <b>${esc(p1.dpm)}</b>` : `<b>${esc(SC.key)}</b>`}` : "");
+  const crumbs = `<a href="#" data-zoom="Team|(All)">Team</a>` + (SC.lvl !== "Team" ? ` ▸ ${p1 ? `<a href="#" data-zoom="Manager|${esc(p1.mgr)}">${esc(p1.mgr)}</a> ▸ <b>${nmTag(p1.dpm)}</b>` : `<b>${esc(SC.key)}</b>`}` : "");
   const capOne = p => {
     if (!p.al || !p.al.has) return `<p>${bwPill(p.bw)} No signed allocation for ${esc(p.dpm)} in ${esc(SC.reg || alDefaultReg())}. Workload from orders: <b>${fmt1(p.w)}</b> weighted orders = ${pctv(p.w / CFG.full)} of a full load (${CFG.full}).</p>`;
     const bars = [{lab: D.al.months[D.al.cur] ? D.al.months[D.al.cur].lab : "now", f: p.al.now}, ...p.al.next].map(x => `<div style="display:inline-block;text-align:center;margin-right:6px"><div style="height:60px;width:34px;display:flex;align-items:flex-end;background:#F6F2EA"><div style="width:100%;height:${Math.min(60, 40 * x.f)}px;background:${x.f >= 1.5 ? "#E31837" : x.f > 1.1 ? "#C98A1B" : x.f >= 1 ? "#2E8540" : "#B7791F"}" title="${x.f.toFixed(2)} FTE"></div></div><div class="sub" style="margin:2px 0 0">${esc(x.lab)}<br><b>${x.f.toFixed(2)}</b></div></div>`).join("");
@@ -1150,7 +1165,7 @@ function viewSC(el){
   </div>
   <div>
     <div><h2>Accounts — orders vs FTE</h2>
-      ${stable("tScA", [cIdx, cTxt("Account", a => a.cust), cNum("Orders", a => a.n), cNum("% of orders", a => a.shN, pctv), cNum("FTE now", a => a.fte, fmt1), cNum("% of FTE", a => a.shF, pctv),
+      ${stable("tScA", [cIdx, cTxt("Account", a => a.cust), cNum("Orders", a => a.n), cNum("% of orders", a => a.shN, pctv), cNum("FTE now", a => a.fte, v => num(v) ? num(v).toFixed(2) : "0"), cNum("% of FTE", a => a.shF, pctv),
         cNum("Weighted", a => a.w, fmt1), cEur("Revenue", a => a.rev), cNum("Products", a => a.np), ...(one ? [] : [cNum("DPMs", a => a.nd)]),
         {h: "Flag", k: a => a.gap, f: a => `<td>${a.gap ? `<b style="color:#5F0229">${esc(a.gap)}</b>` : ""}</td>`}], AC, 300)}</div>
     <div><h2>Products</h2>
@@ -1160,7 +1175,7 @@ function viewSC(el){
   ${one ? (p1.al && p1.al.has ? `<h2>Allocation rows (${esc(SC.reg || alDefaultReg())})</h2>${stable("tScR", [cIdx, cTxt("Customer", r => r.cust || r.raw), cTxt("Project", r => r.proj), cTxt("Product", r => r.prod), cTxt("Activity", r => r.act), cNum("FTE now", r => D.al.cur >= 0 ? r.m[D.al.cur] : 0, fmt1),
       ...p1.al.next.slice(0, 6).map((x, k) => cNum(x.lab, r => r.m[D.al.cur + 1 + k], fmt1))], p1.al.rows, 200)}` : "")
     : `<h2>By DPM — click a row to zoom in</h2>
-  ${stable("tScD", [cIdx, cTxt("DPM Cluster", p => p.clus), cTxt("Manager", p => p.mgr), {h: "DPM", k: p => p.dpm, f: p => `<td><b>${esc(p.dpm)}</b></td>`}, cNum("Accounts", p => p.accs), cNum("Products", p => p.prods),
+  ${stable("tScD", [cIdx, cTxt("DPM Cluster", p => p.clus), cTxt("Manager", p => p.mgr), {h: "DPM", k: p => p.dpm, f: p => `<td><b>${nmTag(p.dpm)}</b></td>`}, cNum("Accounts", p => p.accs), cNum("Products", p => p.prods),
      cNum("Orders", p => p.n), cNum("Weighted", p => p.w, fmt1), {h: "Workload", k: p => WLORD.indexOf(p.band), f: p => `<td class="c">${bandPill(p.band)}</td>`},
      cNum("FTE now", p => p.fte, v => S(v) === "" ? "" : num(v).toFixed(2)), {h: "Allocation", k: p => p.alFlag, f: p => `<td class="c">${esc(p.alFlag)}</td>`},
      {h: "Bandwidth", k: p => BWORD.indexOf(p.bw), f: p => `<td class="c">${bwPill(p.bw)}</td>`}, cNum("Free FTE", p => p.free, v => S(v) === "" ? "" : num(v).toFixed(1)),
@@ -1482,7 +1497,7 @@ function planBar(p){
 let selPerson = null, selMode = "STM or DOO", selStatus = "(All)";
 const STC = {"Missed": "#E31837", "Due in 14 days": "#C98A1B", "Re-planned": "#8E2C5A", "On track": "#2E8540", "No date": "#6D6E70"};
 function viewPerson(el){
-  const team = D.team; if (!team.length) { el.innerHTML = "<p>No DPMs in the Team Summary tab.</p>"; return; }
+  const team = teamShown(); if (!team.length) { el.innerHTML = "<p>No DPMs in the Team Summary tab.</p>"; return; }
   if (!selPerson || !team.find(t => t.name === selPerson)) selPerson = team[0].name;
   const t = team.find(x => x.name === selPerson);
   const mine = D.rows.filter(o => (selMode !== "DOO only" && num(o.dpmIdx) === t.idx) || (selMode !== "STM only" && num(o.dooIdx) === t.idx));
@@ -1502,6 +1517,7 @@ function viewPerson(el){
   el.innerHTML = `
   <div class="controls">
     <div><label>DPM (Gold Name)</label><select id="perSel">${opts(team.map(x => x.name), selPerson)}</select></div>
+    ${isResigned(t) || (S(t.status) && !/^active$/i.test(S(t.status))) ? `<div style="align-self:flex-end;padding-bottom:12px">${nmTag(t.name).replace(esc(t.name), "")}${isResigned(t) ? ' <span class="sub">still has orders or allocation — hidden once both reach zero</span>' : ""}</div>` : ""}
     <div><label>Show orders where DPM is</label><select id="modeSel">${opts(["STM or DOO", "STM only", "DOO only"], selMode)}</select></div>
     <div><label>Status filter</label><select id="stSel">${opts(statuses, selStatus)}</select></div>
     <div class="sub">${esc(t.cluster)} · Manager: ${esc(t.mgr)}</div>
