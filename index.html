@@ -994,10 +994,9 @@ function viewAlloc(el){
 function prodMix(L, top){
   if (!L.length) return '<p class="sub">No orders in this selection.</p>';
   const m = new Map(); L.forEach(o => { const k = S(o.prod) || "(blank)"; const x = m.get(k) || {n: 0, v: 0}; x.n++; x.v += num(o.val); m.set(k, x); });
-  const rows = [...m].sort((a, b) => b[1].n - a[1].n), shown = rows.slice(0, top || 8), rest = rows.slice(top || 8);
-  const bars = shown.map(([k, x]) => ({label: k, a: x.n, b: x.v}));
-  if (rest.length) bars.push({label: `Other ${rest.length} products`, a: rest.reduce((s, [, x]) => s + x.n, 0), b: rest.reduce((s, [, x]) => s + x.v, 0)});
-  return `<div class="sub">${rows.length} products · grey = orders · navy = revenue</div>` + hbars(bars, {b: 1, ca: "#8D8D8F", na: "Orders", cb: "#0A0838", nb: "Revenue", fmt: v => v > 999 ? meur(v) : fmt0(v), lw: 200, aria: "Products"});
+  const rows = [...m].sort((a, b) => b[1].n - a[1].n);
+  const bars = rows.map(([k, x]) => ({label: k, a: x.n, b: x.v}));          // 5-Nov: every product by its own name (no "Other")
+  return `<div class="sub">${rows.length} products · grey = orders · navy = revenue</div>` + hbars(bars, {b: 1, ca: "#8D8D8F", na: "Orders", cb: "#0A0838", nb: "Revenue", fmt: v => v > 999 ? meur(v) : fmt0(v), lw: 260, aria: "Products"});
 }
 
 // ------------------------------------------------------------------ v0.9 Scorecard: one view for the team, a manager / DPM Cluster, or one DPM
