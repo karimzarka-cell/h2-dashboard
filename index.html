@@ -707,7 +707,10 @@ function viewTI(el){
   // v0.9: fixed workload bands on weighted orders + average order age per DPM (orders where the DPM is the STM)
   const ageBy = new Map(); D.rows.forEach(o => { const ix = num(o.dpmIdx), a = num(o.age); if (ix > 0 && a > 0) { const x = ageBy.get(ix) || [0, 0]; x[0] += a; x[1]++; ageBy.set(ix, x); } });
   const idxOf = new Map(D.team.map(t => [t.name, t.idx]));
-  const enrich = L => L.map(o => { const x = ageBy.get(idxOf.get(o.dpm)); return Object.assign({}, o, {wl: o.open > 0 ? wlBand(o.w) : "No open orders", age: x ? x[0] / x[1] : ""}); });
+  const scBy = new Map(scAll().map(p => [p.dpm, p]));                 // 6-Nov: allocation (FTE) from the Allocation tab, same region as the Scorecard
+  const enrich = L => L.map(o => { const x = ageBy.get(idxOf.get(o.dpm)), p = scBy.get(o.dpm), al = p && p.al && p.al.has ? p.al : null;
+    return Object.assign({}, o, {wl: o.open > 0 ? wlBand(o.w) : "No open orders", age: x ? x[0] / x[1] : "", fte: al ? al.now : "", fte3: al ? al.f3 : "",
+      alf: p ? p.alFlag : "No allocation", bw: p ? p.bw : ""}); });
   teamShown(); const byCust = !!TI.cust, base = enrich(byCust ? scoreFor(TI.cust, T) : T.sc).filter(o => !D._hidden.includes(o.dpm));
   const mgrVals = valueList(base, o => o.mgr).sort((a, b) => a[0].localeCompare(b[0]));
   const L = base.filter(o => (TI.clus === "(All)" || o.clus === TI.clus) && (TI.wl === "(All)" || o.wl === TI.wl) && (!TI.dpm || TI.dpm.has(o.dpm)) && (!TI.mgr || TI.mgr.has(o.mgr)));
@@ -727,6 +730,8 @@ function viewTI(el){
     ${card("Missed (target date passed)", fmt0(k.miss), pct(k.miss, k.open) + " of open orders", "#E31837")}
     ${card("Managed revenue", meur(k.rev), "open orders of the team DPMs", "#2E7D32")}
     ${card("Average order age", avgAgeT === "" ? "–" : fmt0(avgAgeT) + " days", ragPill(ageRag(avgAgeT), "optimum ≤ " + CFG.ageG + " days"), "#B7791F")}
+    ${(() => { const A = L.filter(o => o.fte !== ""), f = A.reduce((a, o) => a + num(o.fte), 0), fr = A.reduce((a, o) => a + Math.max(0, 1 - num(o.fte)), 0);
+        return card("Allocation (FTE now)", A.length ? f.toFixed(1) : "–", A.length ? `${A.length} of ${L.length} DPMs allocated · ≈ ${fr.toFixed(1)} FTE free · region ${esc(SC.reg || alDefaultReg())}` : "no Allocation data in this file", "#3B6EA8"); })()}
     ${card("Workload bands", `${nb("Very high")} very high · ${nb("High")} high`, `${nb("Low")} low · ${nb("Very low")} very low · weighted: very low &lt; ${CFG.vlow} · low &lt; ${CFG.low} · high &gt; ${CFG.ok} · very high &gt; ${CFG.high}`, "#5F0229", "wlHigh")}
   </div>
   <h2 class="dark">💡 Key insights</h2>
@@ -751,7 +756,9 @@ function viewTI(el){
      {h: "Missed", k: o => o.miss, x: o => o.miss, f: o => `<td class="num">${o.miss ? `<span class="need">${fmt0(o.miss)}</span>` : 0}</td>`}, cNum("Missed %", o => o.missp, pctv),
      cEur("Managed revenue", o => o.rev), cNum("Share of workload", o => o.share, v => (100 * num(v)).toFixed(1) + "%"),
      {h: "Avg order age (d)", k: o => num(o.age), f: o => `<td class="c">${ragPill(ageRag(o.age), o.age === "" ? "" : fmt0(o.age))}</td>`},
-     {h: "Workload", k: o => WLORD.indexOf(o.wl), f: o => `<td class="c">${bandPill(o.wl)}</td>`}],
+     {h: "Workload", k: o => WLORD.indexOf(o.wl), f: o => `<td class="c">${bandPill(o.wl)}</td>`},
+     cNum("FTE now", o => o.fte, v => v === "" ? "–" : num(v).toFixed(2)), cNum("FTE in 3 months", o => o.fte3, v => v === "" ? "–" : num(v).toFixed(2)),
+     cTxt("Allocation", o => o.alf), {h: "Bandwidth", k: o => o.bw, f: o => `<td class="c">${bwPill(o.bw)}</td>`}],
      L, 0, o => o.wl === "Low" || o.wl === "Very low" ? ' class="wl-low clickrow" data-tisc="' + esc(o.dpm) + '"' : ' class="clickrow" data-tisc="' + esc(o.dpm) + '"', "DPM scorecard")}
   <div class="grid2">
     <div><h2>B · Open orders by DPM Cluster</h2>
