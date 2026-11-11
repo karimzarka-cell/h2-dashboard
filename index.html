@@ -634,8 +634,10 @@ function parseV22(wb){
   const out = {ti: null, cx: null, rw: null};
   const t = wb.Sheets["Team Insights"];
   if (t) {
-    const G = grid(t), at = (r, c) => (G[r - 1] || [])[c] ?? "", C = s => COL(s);
-    const sc = [], v24 = S(at(20, C("M"))) === "Workload";          // v2.4 Dashboard: L = average order age, M = workload band
+    const G = grid(t), at = (r, c) => (G[r - 1] || [])[c] ?? "";
+    const sh = S(at(20, COL("P"))) === "DPM Cluster" ? 1 : 0;          // tables B / C one column to the right (only if a column was ever inserted)
+    const C = s => COL(s) + (sh && COL(s) >= COL("N") ? 1 : 0);
+    const sc = [], v24 = ["Workload", "Load", "Load label"].includes(S(at(20, C("M"))));          // v2.4 Dashboard: L = average order age, M = workload band
     for (let r = 21; r <= 320; r++) { const R = G[r - 1] || []; if (!S(R[C("D")])) continue;
       sc.push({clus: S(R[C("B")]), mgr: S(R[C("C")]), dpm: S(R[C("D")]), open: num(R[C("E")]), w: num(R[C("F")]), avg: R[C("G")], miss: num(R[C("H")]),
                missp: R[C("I")], rev: num(R[C("J")]), share: num(R[C("K")]), wl: S(R[C(v24 ? "M" : "L")])}); }
@@ -742,7 +744,7 @@ function viewTI(el){
     ${card("Average order age", avgAgeT === "" ? "–" : fmt0(avgAgeT) + " days", ragPill(ageRag(avgAgeT), "optimum ≤ " + CFG.ageG + " days"), "#B7791F")}
     ${(() => { const A = L.filter(o => o.fte !== ""), f = A.reduce((a, o) => a + num(o.fte), 0), fr = A.reduce((a, o) => a + Math.max(0, 1 - num(o.fte)), 0);
         return card("Allocation (FTE now)", A.length ? f.toFixed(1) : "–", A.length ? `${A.length} of ${L.length} DPMs allocated · ≈ ${fr.toFixed(1)} FTE free · region ${esc(SC.reg || alDefaultReg())}` : "no Allocation data in this file", "#3B6EA8"); })()}
-    ${LDX() ? card("Load (weighted orders ÷ one full-time DPM)", `${nb("Overloaded")} overloaded · ${nb("Stretched")} stretched`, `${nb("Has a small capacity")} small capacity · ${nb("Has free capacity")} free capacity · ${nb("Half FTE free")} half FTE free · full load ${num(LDX().full).toFixed(1)} weighted orders per FTE`, "#5F0229", "wlHigh")
+    ${LDX() ? card("Load (weighted orders ÷ one full-time DPM)", `${nb("Overloaded")} overloaded · ${nb("Stretched")} stretched`, `${nb("Has a small capacity")} small capacity · ${nb("Has free capacity")} free capacity · ${nb("Half FTE free")} half FTE free · full load ${num(LDX().full).toFixed(0)} weighted orders per FTE`, "#5F0229", "wlHigh")
       : card("Workload bands", `${nb("Very high")} very high · ${nb("High")} high`, `${nb("Low")} low · ${nb("Very low")} very low · weighted: very low &lt; ${CFG.vlow} · low &lt; ${CFG.low} · high &gt; ${CFG.ok} · very high &gt; ${CFG.high}`, "#5F0229", "wlHigh")}
   </div>
   ${loadGuideHtml()}
@@ -1044,7 +1046,7 @@ function ptype(p){ const s = S(p).toLowerCase(); if (!s) return "Other";
   if (/lan|meraki|wi-?fi|switch|wireless/.test(s)) return "LAN"; return "Other"; }
 const BWC = {"Overloaded": "#E31837", "Hidden load": "#E36C09", "Stretched": "#C98A1B", "Balanced": "#2E8540", "Freeing up": "#3B6EA8", "Has bandwidth": "#0A7D45", "No allocation": "#8D8D8F"};
 const BWORD = ["Overloaded", "Hidden load", "Stretched", "Balanced", "Freeing up", "Has bandwidth", "No allocation"];
-function bwPill(b){ const c = BWC[b] || "#4D4D4F"; return b ? `<span class="pill" style="background:${c}22;color:${c}">${esc(b)}</span>` : ""; }
+function bwPill(b){ if (LDX() && LDORD.includes(b)) return bandPill(b); const c = BWC[b] || "#4D4D4F"; return b ? `<span class="pill" style="background:${c}22;color:${c}">${esc(b)}</span>` : ""; }
 const isHold = o => CFG.hold.includes(S(o.ostat).toLowerCase()), isPend = o => CFG.pend.includes(S(o.ostat).toLowerCase());
 const replanned = o => dnum(o.rtdd) !== null && dnum(o.itdd) !== null && dnum(o.rtdd) !== dnum(o.itdd);
 const SC = {lvl: "Team", key: "(All)", reg: null};
@@ -1112,6 +1114,8 @@ function dpmCard(t){
   p.bw = bandwidth(w, al);
   p.free = al && al.has ? Math.max(0, 1 - al.now) : "";
   p.room = Math.max(0, CFG.full - w);
+  if (LDX()) { const x = LDX().by.get(t.name) || {};               // v1.3: one verdict = the Load label (no separate bandwidth)
+    p.bw = x.lab || ""; p.ld = S(x.ld) === "" ? "" : x.ld; p.chk = x.chk || ""; p.room = Math.max(0, (LDX().full || CFG.full) - w); }
   p.alFlag = al && al.has ? alFlag(al.now, D.al.bands) : "No allocation";
   return p;
 }
@@ -1157,9 +1161,9 @@ function viewSC(el){
   const p1 = one ? P[0] : null;
   const crumbs = `<a href="#" data-zoom="Team|(All)">Team</a>` + (SC.lvl !== "Team" ? ` ▸ ${p1 ? `<a href="#" data-zoom="Manager|${esc(p1.mgr)}">${esc(p1.mgr)}</a> ▸ <b>${nmTag(p1.dpm)}</b>` : `<b>${esc(SC.key)}</b>`}` : "");
   const capOne = p => {
-    if (!p.al || !p.al.has) return `<p>${bwPill(p.bw)} No signed allocation for ${esc(p.dpm)} in ${esc(SC.reg || alDefaultReg())}. Workload from orders: <b>${fmt1(p.w)}</b> weighted orders = ${pctv(p.w / CFG.full)} of a full load (${CFG.full}).</p>`;
+    if (!p.al || !p.al.has) return `<p>${bwPill(p.bw)} No signed allocation for ${esc(p.dpm)} in ${esc(SC.reg || alDefaultReg())}. Workload from orders: <b>${fmt1(p.w)}</b> weighted orders = ${pctv(p.w / (LDX() ? LDX().full : CFG.full))} of a full load (${(LDX() ? LDX().full : CFG.full)}).</p>`;
     const bars = [{lab: D.al.months[D.al.cur] ? D.al.months[D.al.cur].lab : "now", f: p.al.now}, ...p.al.next].map(x => `<div style="display:inline-block;text-align:center;margin-right:6px"><div style="height:60px;width:34px;display:flex;align-items:flex-end;background:#F6F2EA"><div style="width:100%;height:${Math.min(60, 40 * x.f)}px;background:${x.f >= 1.5 ? "#E31837" : x.f > 1.1 ? "#C98A1B" : x.f >= 1 ? "#2E8540" : "#B7791F"}" title="${x.f.toFixed(2)} FTE"></div></div><div class="sub" style="margin:2px 0 0">${esc(x.lab)}<br><b>${x.f.toFixed(2)}</b></div></div>`).join("");
-    return `<p style="font-size:15px">${bwPill(p.bw)} &nbsp;FTE now <b>${p.al.now.toFixed(2)}</b> (${esc(p.alFlag)}) · weighted orders <b>${fmt1(p.w)}</b> = ${pctv(p.w / CFG.full)} of a full load</p>
+    return `<p style="font-size:15px">${bwPill(p.bw)} &nbsp;FTE now <b>${p.al.now.toFixed(2)}</b>${LDX() ? (p.ld !== "" ? ` · Load <b>${num(p.ld).toFixed(2)}</b>` : "") + (p.chk ? ` · ${esc(p.chk)}` : "") : ` (${esc(p.alFlag)})`} · weighted orders <b>${fmt1(p.w)}</b> = ${pctv(p.w / (LDX() ? LDX().full : CFG.full))} of a full load</p>
       <p>${p.free > 0 ? `≈ <b>${p.free.toFixed(1)} FTE free now</b>` : "No free FTE now"}${p.al.freeFrom ? ` · FTE drops from <b>${esc(p.al.freeFrom)}</b>` : ""} · room for ≈ <b>${fmt0(p.room)}</b> more weighted orders</p><div>${bars}</div>`;
   };
   const ordCols = [cIdx, cTxt("Order", o => o.order), cOst, cOtp, cTxt("Customer", o => o.cust, 1), cTxt("Project", o => o.proj, 1), cTxt("Product", o => o.prod), cTxt("DPM", o => o.person, 1), cEur("Value", o => o.val), cDate("Target date", o => o.tdd), cStat,
@@ -1182,11 +1186,11 @@ function viewSC(el){
     ${card("On hold · pending closure", `${hold.length} · ${pend.length}`, `${meur(hold.reduce((a, o) => a + o.val, 0))} · ${meur(pend.reduce((a, o) => a + o.val, 0))}`, "#5F0229")}
   </div>
   <div class="grid2">
-    <div class="panel"><h3>Capacity &amp; bandwidth${D.al ? " — " + esc(SC.reg || alDefaultReg()) : ""}</h3>
+    <div class="panel"><h3>Capacity${D.al ? " — " + esc(SC.reg || alDefaultReg()) : ""}</h3>
       ${one ? capOne(p1) : `<p style="font-size:15px">≈ <b>${freeNow.toFixed(1)} FTE free now</b> · ≈ <b>${freeLater.toFixed(1)} FTE</b> within 3 months · ${withAl.length} of ${P.length} DPMs have an allocation</p>
-        <div class="legend">${BWORD.map(s => `<span>${bwPill(s)} ${bwCnt(s)}</span>`).join("")}</div>
-        <div class="sub">Has bandwidth = FTE &lt; 1.0 and orders below a full load · Freeing up = FTE drops in the next 3 months · Hidden load = orders high but FTE ≤ 1.1 (allocation understates the work) · Stretched / Overloaded = FTE &gt; 1.1 / ≥ 1.5 or orders high / very high</div>
-        ${hbars(P.filter(p => p.bw === "Has bandwidth" || p.bw === "Freeing up").sort((a, b) => (b.free || 0) - (a.free || 0)).slice(0, 10).map(p => ({label: p.dpm, a: p.free || 0})), {ca: "#0A7D45", na: "Free FTE now", fmt: v => num(v).toFixed(1), lw: 170, aria: "Who has bandwidth"}) || '<p class="sub">Nobody with free capacity in this selection.</p>'}`}
+        <div class="legend">${(LDX() ? LDORD : BWORD).map(s => `<span>${bwPill(s)} ${bwCnt(s)}</span>`).join("")}</div>
+        <div class="sub">${LDX() ? `Load label = weighted orders ÷ full load (${fmt0(LDX().full)}) · FTE now shown as a check, not part of the label` : "Has bandwidth = FTE &lt; 1.0 and orders below a full load · Freeing up = FTE drops in the next 3 months · Hidden load = orders high but FTE ≤ 1.1 (allocation understates the work) · Stretched / Overloaded = FTE &gt; 1.1 / ≥ 1.5 or orders high / very high"}</div>
+        ${hbars(P.filter(p => LDX() ? (p.bw === "Half FTE free" || p.bw === "Has free capacity") && num(p.fte) > 0 : p.bw === "Has bandwidth" || p.bw === "Freeing up").sort((a, b) => (b.free || 0) - (a.free || 0)).slice(0, 10).map(p => ({label: p.dpm, a: p.free || 0})), {ca: "#0A7D45", na: "Free FTE now", fmt: v => num(v).toFixed(1), lw: 170, aria: "Who has bandwidth"}) || '<p class="sub">Nobody with free capacity in this selection.</p>'}`}
     </div>
     <div class="panel"><h3>RTDD status · order age</h3>
       ${hbars(st, {ca: "#4D4D4F", na: "Orders", fmt: fmt0, lw: 130, aria: "RTDD status"})}
@@ -1207,11 +1211,14 @@ function viewSC(el){
       ...p1.al.next.slice(0, 6).map((x, k) => cNum(x.lab, r => r.m[D.al.cur + 1 + k], fmt1))], p1.al.rows, 200)}` : "")
     : `<h2>By DPM — click a row to zoom in</h2>${loadGuideHtml()}
   ${stable("tScD", [cIdx, cTxt("DPM Cluster", p => p.clus), cTxt("Manager", p => p.mgr), {h: "DPM", k: p => p.dpm, f: p => `<td><b>${nmTag(p.dpm)}</b></td>`}, cNum("Accounts", p => p.accs), cNum("Products", p => p.prods),
-     cNum("Orders", p => p.n), cNum("Weighted", p => p.w, fmt1), {h: "Workload", k: p => WLORD.indexOf(p.band), f: p => `<td class="c">${bandPill(p.band)}</td>`},
-     cNum("FTE now", p => p.fte, v => S(v) === "" ? "" : num(v).toFixed(2)), {h: "Allocation", k: p => p.alFlag, f: p => `<td class="c">${esc(p.alFlag)}</td>`},
-     {h: "Bandwidth", k: p => BWORD.indexOf(p.bw), f: p => `<td class="c">${bwPill(p.bw)}</td>`}, cNum("Free FTE", p => p.free, v => S(v) === "" ? "" : num(v).toFixed(1)),
-     ...(LDX() ? [cNum("Load", p => (LDX().by.get(p.dpm) || {}).ld ?? "", v => S(v) === "" ? "" : num(v).toFixed(2)),
-                  {h: "Load label", k: p => LDORD.indexOf((LDX().by.get(p.dpm) || {}).lab), f: p => `<td class="c">${bandPill((LDX().by.get(p.dpm) || {}).lab || "")}</td>`}] : []),
+     cNum("Orders", p => p.n), cNum("Weighted", p => p.w, fmt1),
+     ...(LDX() ? [cNum("Load", p => p.ld, v => S(v) === "" ? "" : num(v).toFixed(2)),
+                  {h: "Load label", k: p => LDORD.indexOf(p.bw), f: p => `<td class="c">${bandPill(p.bw)}</td>`},
+                  {h: "FTE now", k: p => num(p.fte), f: p => S(p.fte) === "" ? '<td class="num">–</td>' : num(p.fte) > 1.3 ? `<td class="num"><span class="pill" style="background:#E31837;color:#fff">${num(p.fte).toFixed(2)}</span></td>` : `<td class="num">${num(p.fte).toFixed(2)}</td>`},
+                  cTxt("Check", p => p.chk)]
+      : [{h: "Workload", k: p => WLORD.indexOf(p.band), f: p => `<td class="c">${bandPill(p.band)}</td>`},
+         cNum("FTE now", p => p.fte, v => S(v) === "" ? "" : num(v).toFixed(2)), {h: "Allocation", k: p => p.alFlag, f: p => `<td class="c">${esc(p.alFlag)}</td>`},
+         {h: "Bandwidth", k: p => BWORD.indexOf(p.bw), f: p => `<td class="c">${bwPill(p.bw)}</td>`}, cNum("Free FTE", p => p.free, v => S(v) === "" ? "" : num(v).toFixed(1))]),
      cEur("Revenue", p => p.rev), cNum("Missed", p => p.miss), cNum("Due ≤14 d", p => p.due), cNum("% re-planned", p => p.n ? p.repl / p.n : 0, pctv),
      {h: "Avg age (d)", k: p => num(p.age), f: p => `<td class="c">${ragPill(ageRag(p.age), p.age === "" ? "" : fmt0(p.age))}</td>`}, cNum("On hold", p => p.hold.length), cNum("Pending closure", p => p.pend.length)],
      P, 0, p => ` class="clickrow" data-scdpm="${esc(p.dpm)}"`, "Scorecard by DPM")}`}
