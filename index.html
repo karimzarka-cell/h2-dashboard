@@ -1849,21 +1849,22 @@ function viewAsk(el){
 // ------------------------------------------------------------------ v1.6: Overdue - what is late, who owns it
 // Scope: orders staged for the team - the DPM is the STM, or the order sits on a team project or a team customer.
 // Orders that are only in the EMEA tracker are already left out upstream, and Region Watch customers are removed here.
-let odDue = false, odDpm = "(All)", odCust = "(All)", odBuck = "(All)", odLink = "(All)", odq = "";
+let odDue = false, odDpm = "(All)", odCust = "(All)", odBuck = "(All)", odLink = "Team (STM)", odq = "";   // v1.6: opens on your own team orders
+const odWhy = o => o.team === "Team" ? "Team (STM)" : "Linked (project or customer)";
 const OD_B = ["1-30 days", "31-90 days", "over 90 days"];
 function odBucket(d){ const l = -num(d); return l <= 30 ? OD_B[0] : l <= 90 ? OD_B[1] : OD_B[2]; }
-function odRows(){
+function odBase(){                               // scope: Region Watch customers out, then the "why it is ours" filter
   const rw = new Set(((D.v22 && D.v22.rw && D.v22.rw.rows) || []).map(r => r.cust));
-  return D.rows.filter(o => !rw.has(o.cust) && (o.st === "Missed" || (odDue && o.st === "Due in 14 days")));
+  return D.rows.filter(o => !rw.has(o.cust) && (odLink === "(All)" || odWhy(o) === odLink));
 }
+function odRows(){ return odBase().filter(o => o.st === "Missed" || (odDue && o.st === "Due in 14 days")); }
 function viewOverdue(el){
   $("#title").textContent = "EMEA Delivery — Overdue";
-  const R = odRows(), miss = R.filter(o => o.st === "Missed"), due = D.rows.filter(o => o.st === "Due in 14 days");
-  const link = o => o.team === "Team" ? "Team (STM)" : "Linked (project or customer)";
+  const R = odRows(), miss = R.filter(o => o.st === "Missed"), due = odBase().filter(o => o.st === "Due in 14 days");
+  const link = odWhy;
   const q = odq.toLowerCase();
   const L = R.filter(o => (odDpm === "(All)" || o.person === odDpm) && (odCust === "(All)" || o.cust === odCust) &&
       (odBuck === "(All)" || (o.st === "Missed" && odBucket(o.days) === odBuck) || (o.st !== "Missed" && odBuck === "(All)")) &&
-      (odLink === "(All)" || link(o) === odLink) &&
       (!q || [o.order, o.cust, o.proj, o.person, o.doo, o.prod, o.ctry, o.site].some(x => S(x).toLowerCase().includes(q))))
     .sort((a, b) => num(a.days) - num(b.days));
   const late = miss.map(o => -num(o.days)).filter(x => x > 0);
@@ -1881,7 +1882,7 @@ function viewOverdue(el){
     ${card("Missed, never re-planned", fmt0(noDate), "no newer RTDD", "#4D4D4F")}
   </div>
   <div class="panel" style="margin:12px 0"><label style="font-weight:600"><input type="checkbox" id="odDue"${odDue ? " checked" : ""}> Include orders due in the next 14 days</label>
-    <div class="sub">Region Watch customers are never counted here: those are not supported by your team.</div></div>
+    <div class="sub">Opens on <b>Team (STM)</b>: orders where one of your DPMs is the STM. Use Scope below to add the orders that are only linked by project or customer. Region Watch customers are never counted here.</div></div>
   <div class="grid2">
     <div class="panel"><h3>How late</h3><div class="sub">Missed orders by days past the target date</div>${hbars(bucks, {aria: "Missed by age", fmt: fmt0, na: "orders", ca: "#E31837", lw: 120})}</div>
     <div class="panel"><h3>Who</h3><div class="sub">Missed orders per DPM · bar 2 = revenue</div>${hbars(byD, {aria: "Missed by DPM", fmt: fmt0, b: 1, na: "orders", nb: "revenue", ca: "#E31837", cb: "#0A0838"})}</div>
@@ -1892,7 +1893,7 @@ function viewOverdue(el){
     <div><label>DPM (STM)</label><select id="odDpm">${opts(["(All)", ...uniqSorted(R.map(o => o.person))], odDpm)}</select></div>
     <div><label>Customer</label><select id="odCust">${opts(["(All)", ...uniqSorted(R.map(o => o.cust))], odCust)}</select></div>
     <div><label>How late</label><select id="odBuck">${opts(["(All)", ...OD_B], odBuck)}</select></div>
-    <div><label>Why it is ours</label><select id="odLink">${opts(["(All)", "Team (STM)", "Linked (project or customer)"], odLink)}</select></div>
+    <div><label>Scope</label><select id="odLink">${opts(["Team (STM)", "Linked (project or customer)", "(All)"], odLink)}</select></div>
     <button class="btn ghost" id="odClr">Clear filters</button>
   </div>
   <div class="sub">${L.length.toLocaleString()} orders · ${eur(sumV(L))} · most overdue first</div>
@@ -1906,7 +1907,7 @@ function viewOverdue(el){
   const box = $("#odq"); box.oninput = e => { odq = e.target.value; const p = e.target.selectionStart; re(); const n = $("#odq"); n.focus(); n.setSelectionRange(p, p); };
   const bind = (id, fn) => $(id).onchange = e => { fn(e.target.value); re(); };
   bind("#odDpm", x => odDpm = x); bind("#odCust", x => odCust = x); bind("#odBuck", x => odBuck = x); bind("#odLink", x => odLink = x);
-  $("#odClr").onclick = () => { odq = ""; odDpm = odCust = odBuck = odLink = "(All)"; re(); };
+  $("#odClr").onclick = () => { odq = ""; odDpm = odCust = odBuck = "(All)"; odLink = "Team (STM)"; re(); };
 }
 
 </script>
