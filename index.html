@@ -1646,13 +1646,13 @@ function viewUnc(el){
 }
 
 // ------------------------------------------------------------------ All orders
-let oq = "", oSt = "(All)", oCat = "(All)", oDpm = "(All)", oClus = "(All)", oProd = "(All)", oTeam = "(All)";
+let oq = "", oSt = "(All)", oCat = "(All)", oDpm = "(All)", oClus = "(All)", oProd = "(All)", oTeam = "(All)", oCust = "(All)";
 function viewOrders(el){
   const R = D.rows;
   const sts = ["(All)", ...uniqSorted(R.map(o => o.st))], cats = ["(All)", ...(R.length && R[0].tm ? TCATS : CATS).map(c => CSHORT[c])];
   const q = oq.toLowerCase();
   const L = R.filter(o => (oSt === "(All)" || o.st === oSt) && (oCat === "(All)" || CSHORT[o.cat] === oCat) && (oDpm === "(All)" || o.person === oDpm) &&
-      (oClus === "(All)" || o.clus === oClus) && (oProd === "(All)" || o.prod === oProd) && (oTeam === "(All)" || (oTeam === "Team only" ? o.team === "Team" : o.team !== "Team")) &&
+      (oClus === "(All)" || o.clus === oClus) && (oProd === "(All)" || o.prod === oProd) && (oCust === "(All)" || o.cust === oCust) && (oTeam === "(All)" || (oTeam === "Team only" ? o.team === "Team" : o.team !== "Team")) &&
       (!q || [o.order, o.cust, o.proj, o.person, o.doo, o.doc, o.prod, o.clus, o.ctry, o.site, o.comment].some(x => S(x).toLowerCase().includes(q)))).sort((a, b) => b.val - a.val);
   el.innerHTML = `
   <div class="controls">
@@ -1660,6 +1660,7 @@ function viewOrders(el){
     <div><label>Status</label><select id="oSt">${opts(sts, oSt)}</select></div>
     <div><label>${esc(period().label)} category</label><select id="oCat">${opts(cats, oCat)}</select></div>
     <div><label>STM (DPM)</label><select id="oDpm">${opts(["(All)", ...uniqSorted(R.map(o => o.person))], oDpm)}</select></div>
+    <div><label>Customer</label><select id="oCust">${opts(["(All)", ...uniqSorted(R.map(o => o.cust))], oCust)}</select></div>
     <div><label>Cluster</label><select id="oClus">${opts(["(All)", ...uniqSorted(R.map(o => o.clus))], oClus)}</select></div>
     <div><label>Product</label><select id="oProd">${opts(["(All)", ...uniqSorted(R.map(o => o.prod))], oProd)}</select></div>
     <div><label>Team</label><select id="oTeam">${opts(["(All)", "Team only", "Not team"], oTeam)}</select></div>
@@ -1671,8 +1672,8 @@ function viewOrders(el){
       cDate("Customer signature", o => o.sig), cDate("Target date", o => o.tdd), cStat, cCat, cSrc], L, 500)}`;
   const box = $("#oq"); box.oninput = e => { oq = e.target.value; const pos = e.target.selectionStart; viewOrders(el); const nb = $("#oq"); nb.focus(); nb.setSelectionRange(pos, pos); };
   const bind = (id, fn) => $(id).onchange = e => { fn(e.target.value); viewOrders(el); };
-  bind("#oSt", x => oSt = x); bind("#oCat", x => oCat = x); bind("#oDpm", x => oDpm = x); bind("#oClus", x => oClus = x); bind("#oProd", x => oProd = x); bind("#oTeam", x => oTeam = x);
-  $("#oClr").onclick = () => { oq = ""; oSt = oCat = oDpm = oClus = oProd = oTeam = "(All)"; viewOrders(el); };
+  bind("#oSt", x => oSt = x); bind("#oCat", x => oCat = x); bind("#oDpm", x => oDpm = x); bind("#oClus", x => oClus = x); bind("#oProd", x => oProd = x); bind("#oTeam", x => oTeam = x); bind("#oCust", x => oCust = x);
+  $("#oClr").onclick = () => { oq = ""; oSt = oCat = oDpm = oClus = oProd = oTeam = oCust = "(All)"; viewOrders(el); };
 }
 
 // ------------------------------------------------------------------ v1.4: Ask - offline answer box
