@@ -131,6 +131,7 @@ th .fbtn.on{background:var(--red);border-color:var(--red);color:#fff}
   <button data-v="cx">Complexity</button>
   <button data-v="al">Team Allocation</button>
   <button data-v="rw">Region Watch</button>
+  <button data-v="od">Overdue</button>
   <button data-v="ask">Ask</button>
   <span class="exsw" id="exsw" title="Hidden by default (Dashboard switches S3 / S4). Tick to add them back to the views built from the orders."><label><input type="checkbox" id="shDisc">Show Disconnect</label><label><input type="checkbox" id="shObs">Show Obsolescence</label></span>
   <button id="closeBtn">✕ Close file</button>
@@ -154,6 +155,7 @@ th .fbtn.on{background:var(--red);border-color:var(--red);color:#fff}
   <section id="v-al" class="view hidden"></section>
   <section id="v-sc" class="view hidden"></section>
   <section id="v-rw" class="view hidden"></section>
+  <section id="v-od" class="view hidden"></section>
   <section id="v-ask" class="view hidden"></section>
 </main>
 <div id="tip"></div>
@@ -589,7 +591,7 @@ function show(v){
   document.querySelectorAll("#nav button[data-v]").forEach(b => b.classList.toggle("active", b.dataset.v === v));
   document.querySelectorAll(".view").forEach(s => s.classList.add("hidden"));
   const el = $("#v-" + v); el.classList.remove("hidden");
-  ({mgmt: viewMgmt, cust: viewCust, person: viewPerson, unc: viewUnc, orders: viewOrders, ti: viewTI, cx: viewCX, rw: viewRW, al: viewAlloc, sc: viewSC, ask: viewAsk})[v](el);
+  ({mgmt: viewMgmt, cust: viewCust, person: viewPerson, unc: viewUnc, orders: viewOrders, ti: viewTI, cx: viewCX, rw: viewRW, al: viewAlloc, sc: viewSC, od: viewOverdue, ask: viewAsk})[v](el);
 }
 
 // ------------------------------------------------------------------ v0.6: Team Insights, Complexity, Region Watch (read from the v2.2 Dashboard tabs)
@@ -1841,6 +1843,70 @@ function viewAsk(el){
   $("#askin").onkeydown = e => { if (e.key === "Enter") run(); };
   el.querySelectorAll(".askex").forEach(a => a.onclick = ev => { ev.preventDefault(); $("#askin").value = a.dataset.q; run(); });
   if (ASKQ) run();
+}
+
+
+// ------------------------------------------------------------------ v1.6: Overdue - what is late, who owns it
+// Scope: orders staged for the team - the DPM is the STM, or the order sits on a team project or a team customer.
+// Orders that are only in the EMEA tracker are already left out upstream, and Region Watch customers are removed here.
+let odDue = false, odDpm = "(All)", odCust = "(All)", odBuck = "(All)", odLink = "(All)", odq = "";
+const OD_B = ["1-30 days", "31-90 days", "over 90 days"];
+function odBucket(d){ const l = -num(d); return l <= 30 ? OD_B[0] : l <= 90 ? OD_B[1] : OD_B[2]; }
+function odRows(){
+  const rw = new Set(((D.v22 && D.v22.rw && D.v22.rw.rows) || []).map(r => r.cust));
+  return D.rows.filter(o => !rw.has(o.cust) && (o.st === "Missed" || (odDue && o.st === "Due in 14 days")));
+}
+function viewOverdue(el){
+  $("#title").textContent = "EMEA Delivery — Overdue";
+  const R = odRows(), miss = R.filter(o => o.st === "Missed"), due = D.rows.filter(o => o.st === "Due in 14 days");
+  const link = o => o.team === "Team" ? "Team (STM)" : "Linked (project or customer)";
+  const q = odq.toLowerCase();
+  const L = R.filter(o => (odDpm === "(All)" || o.person === odDpm) && (odCust === "(All)" || o.cust === odCust) &&
+      (odBuck === "(All)" || (o.st === "Missed" && odBucket(o.days) === odBuck) || (o.st !== "Missed" && odBuck === "(All)")) &&
+      (odLink === "(All)" || link(o) === odLink) &&
+      (!q || [o.order, o.cust, o.proj, o.person, o.doo, o.prod, o.ctry, o.site].some(x => S(x).toLowerCase().includes(q))))
+    .sort((a, b) => num(a.days) - num(b.days));
+  const late = miss.map(o => -num(o.days)).filter(x => x > 0);
+  const oldest = late.length ? Math.max(...late) : 0;
+  const noDate = R.filter(o => o.st === "Missed" && !replanned(o)).length;
+  const bucks = OD_B.map(b => ({label: b, a: miss.filter(o => odBucket(o.days) === b).length}));
+  const byD = group(miss, o => o.person).map(g => ({label: g.key, a: g.n, b: g.v})).sort((a, b) => b.a - a.a).slice(0, 15);
+  const byC = group(miss, o => o.cust).map(g => ({label: g.key, a: g.n, b: g.v})).sort((a, b) => b.a - a.a).slice(0, 15);
+  el.innerHTML = `
+  <div class="cards">
+    ${card("Missed orders", fmt0(miss.length), "target date passed", "#E31837")}
+    ${card("Revenue at risk", eur(sumV(miss)), "on missed orders", "#8E2C5A")}
+    ${card("Due in 14 days", fmt0(due.length), "not late yet", "#C98A1B")}
+    ${card("Oldest", fmt0(oldest) + " d", "past its target date", "#5F0229")}
+    ${card("Missed, never re-planned", fmt0(noDate), "no newer RTDD", "#4D4D4F")}
+  </div>
+  <div class="panel" style="margin:12px 0"><label style="font-weight:600"><input type="checkbox" id="odDue"${odDue ? " checked" : ""}> Include orders due in the next 14 days</label>
+    <div class="sub">Region Watch customers are never counted here: those are not supported by your team.</div></div>
+  <div class="grid2">
+    <div class="panel"><h3>How late</h3><div class="sub">Missed orders by days past the target date</div>${hbars(bucks, {aria: "Missed by age", fmt: fmt0, na: "orders", ca: "#E31837", lw: 120})}</div>
+    <div class="panel"><h3>Who</h3><div class="sub">Missed orders per DPM · bar 2 = revenue</div>${hbars(byD, {aria: "Missed by DPM", fmt: fmt0, b: 1, na: "orders", nb: "revenue", ca: "#E31837", cb: "#0A0838"})}</div>
+  </div>
+  <div class="panel" style="margin-top:12px"><h3>Which customers</h3><div class="sub">Missed orders per customer · bar 2 = revenue</div>${hbars(byC, {aria: "Missed by customer", fmt: fmt0, b: 1, na: "orders", nb: "revenue", ca: "#E31837", cb: "#0A0838"})}</div>
+  <div class="controls" style="margin-top:12px">
+    <div><label>Search (order, customer, project, STM, site…)</label><input type="search" id="odq" value="${esc(odq)}" placeholder="type to filter" style="min-width:260px"></div>
+    <div><label>DPM (STM)</label><select id="odDpm">${opts(["(All)", ...uniqSorted(R.map(o => o.person))], odDpm)}</select></div>
+    <div><label>Customer</label><select id="odCust">${opts(["(All)", ...uniqSorted(R.map(o => o.cust))], odCust)}</select></div>
+    <div><label>How late</label><select id="odBuck">${opts(["(All)", ...OD_B], odBuck)}</select></div>
+    <div><label>Why it is ours</label><select id="odLink">${opts(["(All)", "Team (STM)", "Linked (project or customer)"], odLink)}</select></div>
+    <button class="btn ghost" id="odClr">Clear filters</button>
+  </div>
+  <div class="sub">${L.length.toLocaleString()} orders · ${eur(sumV(L))} · most overdue first</div>
+  ${stable("tOd", [cIdx, {h: "Days late", k: o => num(o.days), f: o => `<td class="num">${o.st === "Missed" ? fmt0(-num(o.days)) : "–"}</td>`},
+      cStat, cTxt("Order", o => o.order), cTxt("Customer", o => o.cust, 1), cTxt("Project", o => o.proj, 1), cProd,
+      cTxt("STM (DPM)", o => o.person, 1), {h: "Why it is ours", f: o => `<td>${esc(link(o))}</td>`}, cTxt("DOO", o => o.dooD, 1),
+      cEur("Value", o => o.val), cDate("Target date", o => o.tdd), cDate("iTDD", o => o.itdd), cDate("RTDD", o => o.rtdd),
+      {h: "Re-planned", f: o => `<td class="c">${replanned(o) ? "yes" : ""}</td>`}, cCtry, cTxt("Site ID", o => o.site)], L, 500)}`;
+  const re = () => viewOverdue(el);
+  $("#odDue").onchange = e => { odDue = e.target.checked; re(); };
+  const box = $("#odq"); box.oninput = e => { odq = e.target.value; const p = e.target.selectionStart; re(); const n = $("#odq"); n.focus(); n.setSelectionRange(p, p); };
+  const bind = (id, fn) => $(id).onchange = e => { fn(e.target.value); re(); };
+  bind("#odDpm", x => odDpm = x); bind("#odCust", x => odCust = x); bind("#odBuck", x => odBuck = x); bind("#odLink", x => odLink = x);
+  $("#odClr").onclick = () => { odq = ""; odDpm = odCust = odBuck = odLink = "(All)"; re(); };
 }
 
 </script>
