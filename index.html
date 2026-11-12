@@ -1730,7 +1730,7 @@ function aCust(name, P){
   return `<h3>${esc(name)}</h3>` + table(["", ""], rows.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`));
 }
 function aRW(name){                             // a customer your team does not support (Region Watch)
-  const r = ((D.rw && D.rw.rows) || []).find(x => x.cust === name);
+  const r = ((D.v22 && D.v22.rw && D.v22.rw.rows) || []).find(x => x.cust === name);
   if (!r) return null;
   const rows = [["Sales cluster", esc(r.cl)], ["Open orders", fmt0(r.n)], ["Revenue", eur(r.tot)], ["Revenue per order", eur(r.per)],
     ["Impact", esc(r.imp) || "–"], ["Missed", fmt0(r.miss)], ["Orders with no STM", fmt0(r.nostm)],
@@ -1745,7 +1745,7 @@ function askAnswer(raw){
   if (!q.trim()) return "";
   const ALL = scAll(), L = LDX(), full = L ? (L.full || CFG.full) : CFG.full;
   const mgrs = uniqSorted(ALL.map(p => p.mgr)), cls = uniqSorted(ALL.map(p => p.clus));
-  const rwRows = (D.rw && D.rw.rows) || [];
+  const rwRows = (D.v22 && D.v22.rw && D.v22.rw.rows) || [];
   const custs = uniqSorted([...new Set([...D.rows.map(o => o.cust), ...rwRows.map(r => r.cust)])]);   // v1.5: Region Watch customers too
   const pm = aPick(q, ALL.map(p => p.dpm)), mg = aPick(q, mgrs), cl = aPick(q, cls), cu = aPick(q, custs);
   // scope: a manager or a cluster narrows the team
