@@ -1551,7 +1551,8 @@ function viewPerson(el){
   const mx = Math.max(1, ...sts.map(x => sumV(x.L)));
   const W = 900, BH = 22, G = 10, LW = 150;
   let svg = `<svg class="chart" viewBox="0 0 ${W} ${sts.length * (BH + G) + 6}" role="img" aria-label="Portfolio by status">`;
-  sts.forEach((x, i) => { const y = 4 + i * (BH + G), w = (W - LW - 130) * sumV(x.L) / mx, sel = selStatus === x.s;
+  sts.forEach((x, i) => { const y = 4 + i * (BH + G), sel = selStatus === x.s;
+    const w = Math.max(0, (W - LW - 130) * sumV(x.L) / mx);   // v1.5: negative revenue (credits) gave a negative bar, which pushed its label off the chart
     svg += `<g class="hit" data-st="${esc(x.s)}"><rect x="0" y="${y - 3}" width="${W}" height="${BH + 6}" fill="transparent"/><text x="${LW - 8}" y="${y + 15}" text-anchor="end" font-size="12" ${sel ? 'font-weight="bold"' : ""}>${esc(x.s)}</text>
       <rect class="m${sel ? " sel" : ""}" x="${LW}" y="${y}" width="${Math.max(1, w)}" height="${BH}" rx="3" fill="${STC[x.s]}" data-tip="<b>${esc(x.s)}</b><br>${x.L.length} orders · ${eur(sumV(x.L))}"/>
       <text x="${LW + w + 6}" y="${y + 15}" font-size="12" class="ax">${x.L.length} · ${meur(sumV(x.L))}</text></g>`; });
