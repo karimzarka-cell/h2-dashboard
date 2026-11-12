@@ -131,6 +131,7 @@ th .fbtn.on{background:var(--red);border-color:var(--red);color:#fff}
   <button data-v="cx">Complexity</button>
   <button data-v="al">Team Allocation</button>
   <button data-v="rw">Region Watch</button>
+  <button data-v="ask">Ask</button>
   <span class="exsw" id="exsw" title="Hidden by default (Dashboard switches S3 / S4). Tick to add them back to the views built from the orders."><label><input type="checkbox" id="shDisc">Show Disconnect</label><label><input type="checkbox" id="shObs">Show Obsolescence</label></span>
   <button id="closeBtn">✕ Close file</button>
 </nav>
@@ -153,6 +154,7 @@ th .fbtn.on{background:var(--red);border-color:var(--red);color:#fff}
   <section id="v-al" class="view hidden"></section>
   <section id="v-sc" class="view hidden"></section>
   <section id="v-rw" class="view hidden"></section>
+  <section id="v-ask" class="view hidden"></section>
 </main>
 <div id="tip"></div>
 <div class="foot">Tech Mahindra · EMEA Delivery · Confidential — internal use only · Web Viewer v1.2</div>
@@ -587,7 +589,7 @@ function show(v){
   document.querySelectorAll("#nav button[data-v]").forEach(b => b.classList.toggle("active", b.dataset.v === v));
   document.querySelectorAll(".view").forEach(s => s.classList.add("hidden"));
   const el = $("#v-" + v); el.classList.remove("hidden");
-  ({mgmt: viewMgmt, cust: viewCust, person: viewPerson, unc: viewUnc, orders: viewOrders, ti: viewTI, cx: viewCX, rw: viewRW, al: viewAlloc, sc: viewSC})[v](el);
+  ({mgmt: viewMgmt, cust: viewCust, person: viewPerson, unc: viewUnc, orders: viewOrders, ti: viewTI, cx: viewCX, rw: viewRW, al: viewAlloc, sc: viewSC, ask: viewAsk})[v](el);
 }
 
 // ------------------------------------------------------------------ v0.6: Team Insights, Complexity, Region Watch (read from the v2.2 Dashboard tabs)
@@ -1671,6 +1673,156 @@ function viewOrders(el){
   bind("#oSt", x => oSt = x); bind("#oCat", x => oCat = x); bind("#oDpm", x => oDpm = x); bind("#oClus", x => oClus = x); bind("#oProd", x => oProd = x); bind("#oTeam", x => oTeam = x);
   $("#oClr").onclick = () => { oq = ""; oSt = oCat = oDpm = oClus = oProd = oTeam = "(All)"; viewOrders(el); };
 }
+
+// ------------------------------------------------------------------ v1.4: Ask - offline answer box
+// No AI service and no internet: the question is matched against names and a list of known question
+// shapes, and the answer is computed from the workbook already loaded in this browser.
+const ASK_EX = ["Who is overloaded?", "Who can take more orders?", "Ghadir Allam", "Maryam Etry's team",
+                "Top customers by orders", "Who has the most missed orders?", "JT International"];
+let ASKQ = "";
+function aNorm(s){
+  return " " + String(s ?? "").toLowerCase()
+    .replace(/[à-å]/g, "a").replace(/[è-ë]/g, "e").replace(/[ì-ï]/g, "i")
+    .replace(/[ò-ö]/g, "o").replace(/[ù-ü]/g, "u").replace(/[ç]/g, "c")
+    .replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim() + " ";
+}
+function aHas(q, words){ return words.some(w => q.includes(" " + w)); }
+function aPick(q, names){                      // which of these names does the question mention?
+  let best = null, sc = 0, ties = [];
+  names.forEach(n => {
+    const t = aNorm(n).trim().split(" ").filter(x => x.length > 2 && x !== "the" && x !== "and");
+    if (!t.length) return;
+    const hit = t.filter(x => q.includes(" " + x + " ")).length;
+    if (!hit) return;
+    const s = hit === t.length ? 100 + t.length : hit;
+    if (s > sc) { sc = s; best = n; ties = [n]; } else if (s === sc) ties.push(n);
+  });
+  return {name: ties.length === 1 ? best : null, ties: ties.length > 1 ? ties : []};
+}
+function aPerson(p){                           // one DPM, as a small table
+  const L = LDX(), full = L ? (L.full || CFG.full) : CFG.full;
+  const rows = [["Manager", esc(p.mgr)], ["DPM Cluster", esc(p.clus)], ["Open orders", fmt0(p.n)],
+    ["Weighted orders", fmt1(p.w)], ["Load", p.ld === "" || p.ld == null ? "–" : num(p.ld).toFixed(2) + ` (of a full load of ${fmt0(full)})`],
+    ["Label", p.bw ? bandPill(p.bw) : "–"], ["FTE now", p.al && p.al.has ? num(p.al.now).toFixed(2) : "no allocation"],
+    ["Check", esc(p.chk || "–")], ["Accounts", fmt0(p.accs)], ["Missed orders", fmt0(p.miss)],
+    ["Revenue", eur(p.rev)], ["Average order age", p.age === "" ? "–" : fmt0(p.age) + " days"]];
+  return table(["", ""], rows.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`));
+}
+function aList(P, note){                       // a set of DPMs
+  const rows = P.map(p => `<tr><td>${esc(p.dpm)}</td><td>${esc(p.mgr)}</td><td class="num">${fmt0(p.n)}</td>` +
+    `<td class="num">${fmt1(p.w)}</td><td class="num">${p.ld === "" || p.ld == null ? "–" : num(p.ld).toFixed(2)}</td>` +
+    `<td class="c">${p.bw ? bandPill(p.bw) : "–"}</td><td class="num">${p.al && p.al.has ? num(p.al.now).toFixed(2) : "–"}</td></tr>`);
+  return (note ? `<p>${note}</p>` : "") + table(["DPM", "Manager", "Orders", "Weighted", "Load", "Label", "FTE now"], rows);
+}
+function aCust(name, P){
+  const O = P.flatMap(p => p.L).filter(o => o.cust === name);
+  const by = new Map();
+  O.forEach(o => { const k = o.dpm || "(unknown)"; by.set(k, (by.get(k) || 0) + 1); });
+  P.forEach(p => p.L.filter(o => o.cust === name).forEach(() => {}));
+  const perD = new Map();
+  P.forEach(p => { const k = p.L.filter(o => o.cust === name).length; if (k) perD.set(p.dpm, k); });
+  let fte = 0; P.forEach(p => { if (p.al && p.al.acc) fte += num(p.al.acc.get(name)); });
+  const rows = [["Open orders (team)", fmt0(O.length)], ["Revenue", eur(O.reduce((a, o) => a + o.val, 0))],
+    ["Missed", fmt0(O.filter(o => o.st === "Missed").length)], ["Allocated FTE this month", fte ? fte.toFixed(2) : "none"],
+    ["DPMs on it", [...perD.keys()].join(", ") || "–"]];
+  return `<h3>${esc(name)}</h3>` + table(["", ""], rows.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`));
+}
+function askAnswer(raw){
+  if (!D || !D.team || !D.team.length) return "<p>Load a Dashboard file first.</p>";
+  const q = aNorm(raw);
+  if (!q.trim()) return "";
+  const ALL = scAll(), L = LDX(), full = L ? (L.full || CFG.full) : CFG.full;
+  const mgrs = uniqSorted(ALL.map(p => p.mgr)), cls = uniqSorted(ALL.map(p => p.clus));
+  const custs = uniqSorted([...new Set(D.rows.map(o => o.cust))]);
+  const pm = aPick(q, ALL.map(p => p.dpm)), mg = aPick(q, mgrs), cl = aPick(q, cls), cu = aPick(q, custs);
+  // scope: a manager or a cluster narrows the team
+  let P = ALL, scope = "the whole team";
+  if (mg.name && !pm.name) { P = ALL.filter(p => p.mgr === mg.name); scope = `${mg.name}'s team`; }
+  else if (cl.name && !pm.name) { P = ALL.filter(p => p.clus === cl.name); scope = `${cl.name}`; }
+  const lab = ["Overloaded", "Stretched", "Has a small capacity", "Has free capacity", "Half FTE free"]
+    .find(s => q.includes(aNorm(s).trim()) || (s === "Overloaded" && aHas(q, ["overload"])) || (s === "Stretched" && aHas(q, ["stretch"])));
+  const byLoad = (a, b) => num(b.ld) - num(a.ld);
+
+  // 1. a label: who is overloaded / stretched / has free capacity
+  if (lab) {
+    const S = P.filter(p => p.bw === lab).sort(byLoad);
+    return aList(S, `<b>${S.length}</b> of ${P.length} in ${esc(scope)} are <b>${esc(lab)}</b>` +
+      (lab === "Overloaded" ? ` (load above 1.3, so more than ${fmt0(1.3 * full)} weighted orders).` : "."));
+  }
+  // 2. who can take more work
+  if (aHas(q, ["can take", "more orders", "free capacity", "capacity", "available", "room", "bandwidth", "lightest", "least"])) {
+    const S = P.filter(p => p.ld !== "" && p.ld != null).sort((a, b) => num(a.ld) - num(b.ld)).slice(0, 15);
+    return aList(S, `Lowest load in ${esc(scope)} first. "Room" is what is left before a full load of ${fmt0(full)} weighted orders.`);
+  }
+  // 3. busiest
+  if (aHas(q, ["busiest", "most loaded", "highest load", "most orders", "heaviest", "top load", "who is loaded"])) {
+    const S = P.slice().sort(byLoad).slice(0, 15);
+    return aList(S, `Highest load in ${esc(scope)} first.`);
+  }
+  // 4. missed / late
+  if (aHas(q, ["missed", "late", "overdue", "past due", "behind"])) {
+    if (cu.name) return aCust(cu.name, P);
+    const S = P.filter(p => p.miss > 0).sort((a, b) => b.miss - a.miss).slice(0, 15);
+    const rows = S.map(p => `<tr><td>${esc(p.dpm)}</td><td>${esc(p.mgr)}</td><td class="num">${fmt0(p.miss)}</td><td class="num">${fmt0(p.n)}</td><td class="num">${pctv(p.n ? p.miss / p.n : 0)}</td></tr>`);
+    return `<p>Missed orders in ${esc(scope)}: <b>${fmt0(P.reduce((a, p) => a + p.miss, 0))}</b> in total.</p>` +
+      table(["DPM", "Manager", "Missed", "Open orders", "Missed %"], rows);
+  }
+  // 5. customers / accounts
+  if (aHas(q, ["customer", "customers", "account", "accounts", "client", "clients"]) && !cu.name) {
+    const m = new Map();
+    P.flatMap(p => p.L).forEach(o => { const x = m.get(o.cust) || {c: o.cust, n: 0, rev: 0, d: new Set()}; x.n++; x.rev += o.val; x.d.add(o.dpm); m.set(o.cust, x); });
+    const A = [...m.values()].sort((a, b) => b.n - a.n).slice(0, 20);
+    const rows = A.map(a => `<tr><td>${esc(a.c)}</td><td class="num">${fmt0(a.n)}</td><td class="num">${eur(a.rev)}</td><td class="num">${fmt0(a.d.size)}</td></tr>`);
+    return `<p>Top customers by open orders in ${esc(scope)}.</p>` + table(["Customer", "Orders", "Revenue", "DPMs"], rows);
+  }
+  // 6. revenue
+  if (aHas(q, ["revenue", "money", "euro", "eur", "value", "worth"])) {
+    if (cu.name) return aCust(cu.name, P);
+    if (pm.name) return aPerson(P.find(p => p.dpm === pm.name) || ALL.find(p => p.dpm === pm.name));
+    const S = P.slice().sort((a, b) => b.rev - a.rev).slice(0, 15);
+    return `<p>Managed revenue in ${esc(scope)}: <b>${eur(P.reduce((a, p) => a + p.rev, 0))}</b>.</p>` +
+      table(["DPM", "Revenue", "Orders"], S.map(p => `<tr><td>${esc(p.dpm)}</td><td class="num">${eur(p.rev)}</td><td class="num">${fmt0(p.n)}</td></tr>`));
+  }
+  // 7. FTE / allocation
+  if (aHas(q, ["fte", "allocation", "allocated", "signed"])) {
+    if (pm.name) return aPerson(ALL.find(p => p.dpm === pm.name));
+    const S = P.filter(p => p.al && p.al.has).sort((a, b) => b.al.now - a.al.now).slice(0, 20);
+    return `<p>Signed FTE this month in ${esc(scope)}: <b>${P.reduce((a, p) => a + (p.al && p.al.has ? p.al.now : 0), 0).toFixed(2)}</b> over ${S.length} allocated DPMs.</p>` + aList(S, "");
+  }
+  // 8. a named person, a named customer, a manager or a cluster on their own
+  if (pm.name) return aPerson(ALL.find(p => p.dpm === pm.name));
+  if (cu.name) return aCust(cu.name, ALL);
+  if (mg.name || cl.name) return aList(P.slice().sort(byLoad), `${P.length} DPMs in ${esc(scope)}, highest load first.`);
+  if (pm.ties.length) return `<p>Which one do you mean? ${pm.ties.map(esc).join(" · ")}</p>`;
+  if (cu.ties.length) return `<p>Which customer do you mean? ${cu.ties.slice(0, 12).map(esc).join(" · ")}</p>`;
+  // 9. how many orders / general count
+  if (aHas(q, ["how many", "total", "count", "orders"])) {
+    const O = P.flatMap(p => p.L);
+    return `<p>${esc(scope)}: <b>${fmt0(O.length)}</b> open orders · <b>${fmt1(P.reduce((a, p) => a + p.w, 0))}</b> weighted · ` +
+      `<b>${eur(O.reduce((a, o) => a + o.val, 0))}</b> · <b>${fmt0(P.length)}</b> DPMs.</p>`;
+  }
+  return `<p>I did not recognise that one. This box has no AI: it matches names and a set of known questions, then reads the answer from the file.</p>
+    <p>Things it does understand: a DPM's name · a customer's name · a manager's name · <i>who is overloaded</i> · <i>who can take more orders</i> ·
+    <i>who is busiest</i> · <i>who has the most missed orders</i> · <i>top customers</i> · <i>revenue</i> · <i>FTE</i> · <i>how many orders</i>.
+    You can add a manager or a cluster to narrow it, for example <i>who is overloaded in GEA</i>.</p>`;
+}
+function viewAsk(el){
+  $("#title").textContent = "EMEA Delivery — Ask";
+  el.innerHTML = `<div class="panel"><h3>Ask about this Dashboard</h3>
+    <div class="sub">Works offline. Nothing is sent anywhere: the answer is read from the file open in this browser.</div>
+    <div style="display:flex;gap:8px;margin:12px 0">
+      <input id="askin" type="text" placeholder="e.g. who can take more orders in GEA" style="flex:1;padding:9px 11px;border:1px solid #CFCFD2;border-radius:6px;font:inherit">
+      <button id="askgo" class="btn">Ask</button></div>
+    <div class="sub">${ASK_EX.map(x => `<a href="#" class="askex" data-q="${esc(x)}">${esc(x)}</a>`).join(" · ")}</div>
+    <div id="askout" style="margin-top:16px"></div></div>`;
+  const run = () => { ASKQ = $("#askin").value; $("#askout").innerHTML = askAnswer(ASKQ); };
+  $("#askgo").onclick = run;
+  $("#askin").value = ASKQ;
+  $("#askin").onkeydown = e => { if (e.key === "Enter") run(); };
+  el.querySelectorAll(".askex").forEach(a => a.onclick = ev => { ev.preventDefault(); $("#askin").value = a.dataset.q; run(); });
+  if (ASKQ) run();
+}
+
 </script>
 </body>
 </html>
