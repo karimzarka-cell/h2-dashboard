@@ -640,7 +640,7 @@ function parseV22(wb){
   if (t) {
     const G = grid(t), at = (r, c) => (G[r - 1] || [])[c] ?? "";
     const sh = S(at(20, COL("P"))) === "DPM Cluster" ? 1 : 0;          // tables B / C one column to the right (only if a column was ever inserted)
-    const C = s => COL(s) + (sh && COL(s) >= COL("N") ? 1 : 0);
+    const C = s => COL(s) + (sh && COL(s) >= COL("O") && COL(s) <= COL("U") ? 1 : 0);   // only tables B / C moved; the Z helper block did not
     const sc = [], v24 = ["Workload", "Load", "Load label"].includes(S(at(20, C("M"))));          // v2.4 Dashboard: L = average order age, M = workload band
     for (let r = 21; r <= 320; r++) { const R = G[r - 1] || []; if (!S(R[C("D")])) continue;
       sc.push({clus: S(R[C("B")]), mgr: S(R[C("C")]), dpm: S(R[C("D")]), open: num(R[C("E")]), w: num(R[C("F")]), avg: R[C("G")], miss: num(R[C("H")]),
