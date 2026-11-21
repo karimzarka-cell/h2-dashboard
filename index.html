@@ -730,16 +730,17 @@ function viewTI(el){
   teamShown(); const byCust = !!TI.cust, base = enrich(byCust ? scoreFor(TI.cust, T) : T.sc).filter(o => !D._hidden.includes(o.dpm));
   const mgrVals = valueList(base, o => o.mgr).sort((a, b) => a[0].localeCompare(b[0]));
   // v1.7: projects and sales regions per DPM, from the orders
-  const PJ = new Map(), RG = new Map();
+  const PJ = new Map(), RG = new Map(), kN = v => S(v).trim().toLowerCase();   // names differ in case between the tabs
   D.rows.filter(o => num(o.dpmIdx) > 0).forEach(o => {
-    if (!PJ.has(o.person)) { PJ.set(o.person, new Set()); RG.set(o.person, new Set()); }
-    if (o.proj) PJ.get(o.person).add(o.proj);
-    if (o.clus) RG.get(o.person).add(o.clus);
+    const k = kN(o.person); if (!k) return;
+    if (!PJ.has(k)) { PJ.set(k, new Set()); RG.set(k, new Set()); }
+    if (o.proj) PJ.get(k).add(o.proj);
+    if (o.clus) RG.get(k).add(o.clus);
   });
-  base.forEach(o => o.pj = (PJ.get(o.dpm) || new Set()).size);
+  base.forEach(o => o.pj = (PJ.get(kN(o.dpm)) || new Set()).size);
   const regVals = valueList(D.rows.filter(o => num(o.dpmIdx) > 0), o => o.clus).sort((a, b) => a[0].localeCompare(b[0]));
   const L = base.filter(o => (TI.clus === "(All)" || o.clus === TI.clus) && (TI.wl === "(All)" || o.wl === TI.wl) && (!TI.dpm || TI.dpm.has(o.dpm)) && (!TI.mgr || TI.mgr.has(o.mgr))
-      && (!TI.reg || [...(RG.get(o.dpm) || new Set())].some(r => TI.reg.has(r))));
+      && (!TI.reg || [...(RG.get(kN(o.dpm)) || new Set())].some(r => TI.reg.has(r))));
   const allAge = [...ageBy.values()].reduce((a, x) => [a[0] + x[0], a[1] + x[1]], [0, 0]), avgAgeT = allAge[1] ? allAge[0] / allAge[1] : "";
   const withO = L.filter(o => o.open > 0).sort((a, b) => b.w - a.w), top = withO.slice(0, 15);
   const nb = b => base.filter(o => o.wl === b).length;
@@ -1436,7 +1437,7 @@ function viewCust(el){
   if (!selCust || (selCust !== ALLC && !custs.includes(selCust))) { selCust = ALLC; selProj = "(All projects)"; }
   if (selClus !== ALLK && !clus.includes(selClus)) selClus = ALLK;
   const tIdx = new Map(D.team.map(t => [t.idx, t]));
-  const mgrOf = o => { const t = tIdx.get(num(o.dpmIdx)); return t ? S(t.manager) : ""; };
+  const mgrOf = o => { const t = tIdx.get(num(o.dpmIdx)); return t ? S(t.mgr) : ""; };   // Team Summary field is "mgr"
   const mgrs = uniqSorted(R.map(mgrOf).filter(Boolean));
   if (selMgr !== "(All managers)" && !mgrs.includes(selMgr)) selMgr = "(All managers)";
   const dpmsAll = uniqSorted(R.filter(o => selMgr === "(All managers)" || mgrOf(o) === selMgr).map(o => o.person).filter(x => x && x !== "(No STM)"));
