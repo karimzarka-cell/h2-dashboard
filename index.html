@@ -632,7 +632,7 @@ const cNum = (h, g, f) => ({h, k: o => num(g(o)), x: o => S(g(o)) === "" ? "" : 
 const cxPill = v => { const n = num(v); return S(v) === "" ? "" : `<span class="pill ${n >= 2 ? "st-Missed" : n >= 1.5 ? "st-Due" : n > 1 ? "st-Re" : "st-No"}">${n.toFixed(n % 1 ? 1 : 1)}</span>`; };
 const wlPill = v => v === "Low" ? '<span class="pill" style="background:#FFF176;color:#5F4B00">Low</span>' : v === "High" ? '<span class="pill st-Missed">High</span>' : v === "Normal" ? '<span class="pill st-On">Normal</span>' : v ? `<span class="na">${esc(v)}</span>` : "";
 const needV22 = what => `<div class="err">The ${esc(what)} tab was not found in this file. It comes with Dashboard v2.2 — open the latest EMEA Dashboard.xlsx (saved after Import &amp; Refresh).</div>`;
-const TI = {clus: "(All)", wl: "(All)", dpm: null, cust: null, mgr: null};
+const TI = {clus: "(All)", wl: "(All)", dpm: null, cust: null, mgr: null, reg: null};   // v1.7: + sales region
 
 function parseV22(wb){
   const out = {ti: null, cx: null, rw: null};
@@ -729,7 +729,17 @@ function viewTI(el){
   const WL = LDX() ? LDORD : WLORD;
   teamShown(); const byCust = !!TI.cust, base = enrich(byCust ? scoreFor(TI.cust, T) : T.sc).filter(o => !D._hidden.includes(o.dpm));
   const mgrVals = valueList(base, o => o.mgr).sort((a, b) => a[0].localeCompare(b[0]));
-  const L = base.filter(o => (TI.clus === "(All)" || o.clus === TI.clus) && (TI.wl === "(All)" || o.wl === TI.wl) && (!TI.dpm || TI.dpm.has(o.dpm)) && (!TI.mgr || TI.mgr.has(o.mgr)));
+  // v1.7: projects and sales regions per DPM, from the orders
+  const PJ = new Map(), RG = new Map();
+  D.rows.filter(o => num(o.dpmIdx) > 0).forEach(o => {
+    if (!PJ.has(o.person)) { PJ.set(o.person, new Set()); RG.set(o.person, new Set()); }
+    if (o.proj) PJ.get(o.person).add(o.proj);
+    if (o.clus) RG.get(o.person).add(o.clus);
+  });
+  base.forEach(o => o.pj = (PJ.get(o.dpm) || new Set()).size);
+  const regVals = valueList(D.rows.filter(o => num(o.dpmIdx) > 0), o => o.clus).sort((a, b) => a[0].localeCompare(b[0]));
+  const L = base.filter(o => (TI.clus === "(All)" || o.clus === TI.clus) && (TI.wl === "(All)" || o.wl === TI.wl) && (!TI.dpm || TI.dpm.has(o.dpm)) && (!TI.mgr || TI.mgr.has(o.mgr))
+      && (!TI.reg || [...(RG.get(o.dpm) || new Set())].some(r => TI.reg.has(r))));
   const allAge = [...ageBy.values()].reduce((a, x) => [a[0] + x[0], a[1] + x[1]], [0, 0]), avgAgeT = allAge[1] ? allAge[0] / allAge[1] : "";
   const withO = L.filter(o => o.open > 0).sort((a, b) => b.w - a.w), top = withO.slice(0, 15);
   const nb = b => base.filter(o => o.wl === b).length;
@@ -760,6 +770,7 @@ function viewTI(el){
     ${msel("tiMgr", "Manager", mgrVals, TI.mgr)}
     ${msel("tiDpm", "DPM", dpmVals, TI.dpm)}
     ${msel("tiCust", "Customer", custVals, TI.cust)}
+    ${msel("tiReg", "Sales region", regVals, TI.reg)}
     <div><label>${LDX() ? "Load" : "Workload"}</label><select id="tiWl">${opts(["(All)", ...WL], TI.wl)}</select></div>
     <button class="btn ghost" id="tiClr">Clear filters</button>
   </div><div class="chips">${L.length} DPMs · ${fmt0(sum(o => o.open))} open orders · ${fmt1(sum(o => o.w))} weighted · ${meur(sum(o => o.rev))}${byCust ? ` · <b>only the orders of ${TI.cust.size === 1 ? esc([...TI.cust][0]) : TI.cust.size + " customers"}</b> ` : ""} · yellow = low / very low workload</div></div>
@@ -770,7 +781,7 @@ function viewTI(el){
       ${T.cl.length ? donut(T.cl.map(o => ({label: o.name, v: o.open})), {fmt: fmt0, center: "open orders", dim: "ticlus", sel: TI.clus, aria: "Open orders by DPM Cluster"}) : '<p class="sub">No cluster data.</p>'}</div>
   </div>
   ${stable("tSc", [cIdx, cTxt("DPM Cluster", o => o.clus), cTxt("Manager", o => o.mgr), {h: "DPM", k: o => o.dpm, f: o => `<td><b>${nmTag(o.dpm)}</b></td>`},
-     cNum("Open orders", o => o.open), cNum("Weighted orders", o => o.w, fmt1), cNum("Avg complexity", o => o.avg, v => num(v).toFixed(2)),
+     cNum("Open orders", o => o.open), cNum("Weighted orders", o => o.w, fmt1), cNum("Projects", o => o.pj), cNum("Avg complexity", o => o.avg, v => num(v).toFixed(2)),
      {h: "Missed", k: o => o.miss, x: o => o.miss, f: o => `<td class="num">${o.miss ? `<span class="need">${fmt0(o.miss)}</span>` : 0}</td>`}, cNum("Missed %", o => o.missp, pctv),
      cEur("Managed revenue", o => o.rev), cNum("Share of workload", o => o.share, v => (100 * num(v)).toFixed(1) + "%"),
      {h: "Avg order age (d)", k: o => num(o.age), f: o => `<td class="c">${ragPill(ageRag(o.age), o.age === "" ? "" : fmt0(o.age))}</td>`},
@@ -791,12 +802,13 @@ function viewTI(el){
   </div>`;
   $("#tiClus").onchange = e => { TI.clus = e.target.value; viewTI(el); };
   $("#tiWl").onchange = e => { TI.wl = e.target.value; viewTI(el); };
-  $("#tiClr").onclick = () => { TI.clus = "(All)"; TI.wl = "(All)"; TI.dpm = null; TI.cust = null; TI.mgr = null; FLT.tSc = {}; viewTI(el); };
+  $("#tiClr").onclick = () => { TI.clus = "(All)"; TI.wl = "(All)"; TI.dpm = null; TI.cust = null; TI.mgr = null; TI.reg = null; FLT.tSc = {}; viewTI(el); };
   el.onclick = e => {                                  // delegated: still works after a table is re-sorted
     const ms = e.target.closest("[data-ms]");
     if (ms) { e.preventDefault();
       if (ms.dataset.ms === "tiDpm") openPop(ms, dpmVals, TI.dpm ? [...TI.dpm] : null, s => { TI.dpm = s; viewTI(el); }, "DPM");
       else if (ms.dataset.ms === "tiMgr") openPop(ms, mgrVals, TI.mgr ? [...TI.mgr] : null, s => { TI.mgr = s; viewTI(el); }, "Manager");
+      else if (ms.dataset.ms === "tiReg") openPop(ms, regVals, TI.reg ? [...TI.reg] : null, s => { TI.reg = s; viewTI(el); }, "Sales region");
       else openPop(ms, custVals, TI.cust ? [...TI.cust] : null, s => { TI.cust = s; viewTI(el); }, "Customer");
       return; }
     const sr = e.target.closest("tr[data-tisc]");
@@ -1416,13 +1428,21 @@ const ACTS = {"Convert billing": "Chase billing / acceptance before month-end", 
 
 // ------------------------------------------------------------------ Customer & Project
 let selCust = null, selClus = "(All clusters)", selProj = "(All projects)", cpScope = "Team-assigned orders";
+let selMgr = "(All managers)", selDpm = "(All DPMs)";      // v1.7: manager / DPM filters on Customer & Project
 const ALLC = "(All customers)", ALLK = "(All clusters)";
 function viewCust(el){
   const P = period(), R = cpScope === "Team-assigned orders" ? D.rows.filter(o => num(o.dpmIdx) > 0) : D.rows;   // v0.9: STM in the team, or every linked order
   const custs = uniqSorted(R.map(o => o.cust)), clus = uniqSorted(R.map(o => o.clus));
   if (!selCust || (selCust !== ALLC && !custs.includes(selCust))) { selCust = ALLC; selProj = "(All projects)"; }
   if (selClus !== ALLK && !clus.includes(selClus)) selClus = ALLK;
-  const C = R.filter(o => (selCust === ALLC || o.cust === selCust) && (selClus === ALLK || o.clus === selClus));
+  const tIdx = new Map(D.team.map(t => [t.idx, t]));
+  const mgrOf = o => { const t = tIdx.get(num(o.dpmIdx)); return t ? S(t.manager) : ""; };
+  const mgrs = uniqSorted(R.map(mgrOf).filter(Boolean));
+  if (selMgr !== "(All managers)" && !mgrs.includes(selMgr)) selMgr = "(All managers)";
+  const dpmsAll = uniqSorted(R.filter(o => selMgr === "(All managers)" || mgrOf(o) === selMgr).map(o => o.person).filter(x => x && x !== "(No STM)"));
+  if (selDpm !== "(All DPMs)" && !dpmsAll.includes(selDpm)) selDpm = "(All DPMs)";
+  const C = R.filter(o => (selCust === ALLC || o.cust === selCust) && (selClus === ALLK || o.clus === selClus)
+      && (selMgr === "(All managers)" || mgrOf(o) === selMgr) && (selDpm === "(All DPMs)" || o.person === selDpm));
   const selTxt = (selCust === ALLC ? "all customers" : selCust) + (selClus === ALLK ? "" : " · " + selClus);
   const projs = [...new Set(C.map(o => o.proj))];
   if (!["(All projects)", ...projs].includes(selProj)) selProj = "(All projects)";
@@ -1446,6 +1466,8 @@ function viewCust(el){
     <div><label>Orders</label><select id="cpScope">${opts(["Team-assigned orders", "All linked orders"], cpScope)}</select></div>
     <div><label>Customer (end customer)</label><select id="cSel">${opts([ALLC, ...custs], selCust)}</select></div>
     <div><label>Sales cluster</label><select id="kSel">${opts([ALLK, ...clus], selClus)}</select></div>
+    <div><label>Manager</label><select id="mSel">${opts(["(All managers)", ...mgrs], selMgr)}</select></div>
+    <div><label>DPM</label><select id="dSel">${opts(["(All DPMs)", ...dpmsAll], selDpm)}</select></div>
     <div><label>Project</label><select id="pSel">${opts(["(All projects)", ...projs.sort()], selProj)}</select></div>
     <a href="#" id="jumpPlan" class="sub" style="margin:0 0 10px">▼ Project planning</a>
     <a href="#" id="jumpOrders" class="sub" style="margin:0 0 10px">▼ Order list</a>
@@ -1502,6 +1524,8 @@ function viewCust(el){
       cTxt("RTDD history", o => H(o).t), cCat], list, 500)}`;
   $("#cSel").onchange = e => { selCust = e.target.value; selProj = "(All projects)"; viewCust(el); };
   $("#kSel").onchange = e => { selClus = e.target.value; selProj = "(All projects)"; viewCust(el); };
+  $("#mSel").onchange = e => { selMgr = e.target.value; selDpm = "(All DPMs)"; selProj = "(All projects)"; viewCust(el); };
+  $("#dSel").onchange = e => { selDpm = e.target.value; selProj = "(All projects)"; viewCust(el); };
   $("#cpScope").onchange = e => { cpScope = e.target.value; viewCust(el); };
   $("#jumpPlan").onclick = e => { e.preventDefault(); $("#hPlan").scrollIntoView({behavior: "smooth"}); };
   $("#jumpOrders").onclick = e => { e.preventDefault(); $("#hCustOrders").scrollIntoView({behavior: "smooth"}); };
