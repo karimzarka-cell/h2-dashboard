@@ -759,7 +759,7 @@ function viewTI(el){
     ${card("Average order age", avgAgeT === "" ? "–" : fmt0(avgAgeT) + " days", ragPill(ageRag(avgAgeT), "optimum ≤ " + CFG.ageG + " days"), "#B7791F")}
     ${(() => { const A = L.filter(o => o.fte !== ""), f = A.reduce((a, o) => a + num(o.fte), 0), fr = A.reduce((a, o) => a + Math.max(0, 1 - num(o.fte)), 0);
         return card("Allocation (FTE now)", A.length ? f.toFixed(1) : "–", A.length ? `${A.length} of ${L.length} DPMs allocated · ≈ ${fr.toFixed(1)} FTE free · region ${esc(SC.reg || alDefaultReg())}` : "no Allocation data in this file", "#3B6EA8"); })()}
-    ${LDX() ? card("Load (weighted orders ÷ one full-time DPM)", `${nb("Overloaded")} overloaded · ${nb("Stretched")} stretched`, `${nb("Has a small capacity")} small capacity · ${nb("Has free capacity")} free capacity · ${nb("Half FTE free")} half FTE free · full load ${num(LDX().full).toFixed(0)} weighted orders per FTE`, "#5F0229", "wlHigh")
+    ${LDX() ? card("Load (weighted orders ÷ one full-time DPM)", `${nb("Well above allocation")} well above · ${nb("Above allocation")} above allocation`, `${nb("In line with allocation")} in line · ${nb("Below allocation")} below · ${nb("Well below allocation")} well below · full load ${num(LDX().full).toFixed(0)} weighted orders per FTE`, "#5F0229", "wlHigh")
       : card("Workload bands", `${nb("Very high")} very high · ${nb("High")} high`, `${nb("Low")} low · ${nb("Very low")} very low · weighted: very low &lt; ${CFG.vlow} · low &lt; ${CFG.low} · high &gt; ${CFG.ok} · very high &gt; ${CFG.high}`, "#5F0229", "wlHigh")}
   </div>
   ${loadGuideHtml()}
@@ -794,7 +794,7 @@ function viewTI(el){
       : [{h: "Workload", k: o => WLORD.indexOf(o.wl), f: o => `<td class="c">${bandPill(o.wl)}</td>`},
         cNum("FTE now", o => o.fte, v => v === "" ? "–" : num(v).toFixed(2)), cNum("FTE in 3 months", o => o.fte3, v => v === "" ? "–" : num(v).toFixed(2)),
         cTxt("Allocation", o => o.alf), {h: "Bandwidth", k: o => o.bw, f: o => `<td class="c">${bwPill(o.bw)}</td>`}])],
-     L, 0, o => o.wl === "Low" || o.wl === "Very low" || o.wl === "Has free capacity" || o.wl === "Half FTE free" ? ' class="wl-low clickrow" data-tisc="' + esc(o.dpm) + '"' : ' class="clickrow" data-tisc="' + esc(o.dpm) + '"', "DPM scorecard")}
+     L, 0, o => o.wl === "Low" || o.wl === "Very low" || o.wl === "Below allocation" || o.wl === "Well below allocation" ? ' class="wl-low clickrow" data-tisc="' + esc(o.dpm) + '"' : ' class="clickrow" data-tisc="' + esc(o.dpm) + '"', "DPM scorecard")}
   <div class="grid2">
     <div><h2>B · Open orders by DPM Cluster</h2>
       ${stable("tCl", [cTxt("DPM Cluster", o => o.name), cNum("Open orders", o => o.open), cNum("Weighted", o => o.w, fmt1), cEur("Open revenue", o => o.rev), cNum("Share", o => o.share, pctv), cNum("DPMs", o => o.dpms)], T.cl, 0, o => ` class="clickrow" data-ticlus="${esc(o.name)}"`, "DPM Clusters")}</div>
@@ -1047,8 +1047,8 @@ function prodMix(L, top){
 const CFG = {vlow: 20, low: 40, ok: 100, high: 150, full: 70, ageG: 123, ageA: 180, hold: ["on-hold", "on hold"], pend: ["acceptance", "billing"]};
 function wlBand(w){ return w <= 0 ? "No open orders" : w < CFG.vlow ? "Very low" : w < CFG.low ? "Low" : w <= CFG.ok ? "OK" : w <= CFG.high ? "High" : "Very high"; }
 const WLC = {"Very low": "#B7791F", "Low": "#C98A1B", "OK": "#2E8540", "High": "#E36C09", "Very high": "#E31837", "No open orders": "#8D8D8F",
-  "Overloaded": "#E31837", "Stretched": "#C55A11", "Has a small capacity": "#4D4D4F", "Has free capacity": "#5C8A1E", "Half FTE free": "#2E8540", "No work": "#8D8D8F"};
-const LDORD = ["Overloaded", "Stretched", "Has a small capacity", "Has free capacity", "Half FTE free", "No work"];
+  "Well above allocation": "#E31837", "Above allocation": "#C55A11", "In line with allocation": "#4D4D4F", "Below allocation": "#5C8A1E", "Well below allocation": "#2E8540", "No work": "#8D8D8F"};
+const LDORD = ["Well above allocation", "Above allocation", "In line with allocation", "Below allocation", "Well below allocation", "No work"];
 const LDX = () => D.v22 && D.v22.load;                               // the Load tab (macro v2.5) when the Dashboard has it
 function loadGuideHtml(){ const L = LDX(); if (!L) return "";
   return `<details class="panel" style="margin:8px 0"><summary style="cursor:pointer;font-weight:bold;color:#E31837">ⓘ How Load is calculated</summary><div style="margin-top:8px;font-size:13px;line-height:1.5">` +
@@ -1206,8 +1206,8 @@ function viewSC(el){
     <div class="panel"><h3>Capacity${D.al ? " — " + esc(SC.reg || alDefaultReg()) : ""}</h3>
       ${one ? capOne(p1) : `<p style="font-size:15px">≈ <b>${freeNow.toFixed(1)} FTE free now</b> · ≈ <b>${freeLater.toFixed(1)} FTE</b> within 3 months · ${withAl.length} of ${P.length} DPMs have an allocation</p>
         <div class="legend">${(LDX() ? LDORD : BWORD).map(s => `<span>${bwPill(s)} ${bwCnt(s)}</span>`).join("")}</div>
-        <div class="sub">${LDX() ? `Load label = weighted orders ÷ full load (${fmt0(LDX().full)}) · FTE now shown as a check, not part of the label` : "Has bandwidth = FTE &lt; 1.0 and orders below a full load · Freeing up = FTE drops in the next 3 months · Hidden load = orders high but FTE ≤ 1.1 (allocation understates the work) · Stretched / Overloaded = FTE &gt; 1.1 / ≥ 1.5 or orders high / very high"}</div>
-        ${hbars(P.filter(p => LDX() ? (p.bw === "Half FTE free" || p.bw === "Has free capacity") && num(p.fte) > 0 : p.bw === "Has bandwidth" || p.bw === "Freeing up").sort((a, b) => (b.free || 0) - (a.free || 0)).slice(0, 10).map(p => ({label: p.dpm, a: p.free || 0})), {ca: "#0A7D45", na: "Free FTE now", fmt: v => num(v).toFixed(1), lw: 170, aria: "Who has bandwidth"}) || '<p class="sub">Nobody with free capacity in this selection.</p>'}`}
+        <div class="sub">${LDX() ? `Load label = weighted orders ÷ full load (${fmt0(LDX().full)}) · FTE now shown as a check, not part of the label<br><span style="color:#7F7F7F">Load compares assigned open orders against the allocation file. It excludes escalations, pre-sales, governance, leave and training. A label is a prompt to check the allocation and the order split &mdash; not an assessment of the person.</span>` : "Has bandwidth = FTE &lt; 1.0 and orders below a full load · Freeing up = FTE drops in the next 3 months · Hidden load = orders high but FTE ≤ 1.1 (allocation understates the work) · Stretched / Overloaded = FTE &gt; 1.1 / ≥ 1.5 or orders high / very high"}</div>
+        ${hbars(P.filter(p => LDX() ? (p.bw === "Well below allocation" || p.bw === "Below allocation") && num(p.fte) > 0 : p.bw === "Has bandwidth" || p.bw === "Freeing up").sort((a, b) => (b.free || 0) - (a.free || 0)).slice(0, 10).map(p => ({label: p.dpm, a: p.free || 0})), {ca: "#0A7D45", na: "Free FTE now", fmt: v => num(v).toFixed(1), lw: 170, aria: "Who has bandwidth"}) || '<p class="sub">Nobody with free capacity in this selection.</p>'}`}
     </div>
     <div class="panel"><h3>RTDD status · order age</h3>
       ${hbars(st, {ca: "#4D4D4F", na: "Orders", fmt: fmt0, lw: 130, aria: "RTDD status"})}
@@ -1779,15 +1779,15 @@ function askAnswer(raw){
   let P = ALL, scope = "the whole team";
   if (mg.name && !pm.name) { P = ALL.filter(p => p.mgr === mg.name); scope = `${mg.name}'s team`; }
   else if (cl.name && !pm.name) { P = ALL.filter(p => p.clus === cl.name); scope = `${cl.name}`; }
-  const lab = ["Overloaded", "Stretched", "Has a small capacity", "Has free capacity", "Half FTE free"]
-    .find(s => q.includes(aNorm(s).trim()) || (s === "Overloaded" && aHas(q, ["overload"])) || (s === "Stretched" && aHas(q, ["stretch"])));
+  const lab = ["Well above allocation", "Above allocation", "In line with allocation", "Below allocation", "Well below allocation"]
+    .find(s => q.includes(aNorm(s).trim()) || (s === "Well above allocation" && aHas(q, ["overload", "well above"])) || (s === "Above allocation" && aHas(q, ["stretch", "above alloc"])) || (s === "Well below allocation" && aHas(q, ["half fte", "well below", "free capacity"])));
   const byLoad = (a, b) => num(b.ld) - num(a.ld);
 
   // 1. a label: who is overloaded / stretched / has free capacity
   if (lab) {
     const S = P.filter(p => p.bw === lab).sort(byLoad);
     return aList(S, `<b>${S.length}</b> of ${P.length} in ${esc(scope)} are <b>${esc(lab)}</b>` +
-      (lab === "Overloaded" ? ` (load above 1.3, so more than ${fmt0(1.3 * full)} weighted orders).` : "."));
+      (lab === "Well above allocation" ? ` (load above 1.3, so more than ${fmt0(1.3 * full)} weighted orders).` : "."));
   }
   // 2. who can take more work
   if (aHas(q, ["can take", "more orders", "free capacity", "capacity", "available", "room", "bandwidth", "lightest", "least"])) {
